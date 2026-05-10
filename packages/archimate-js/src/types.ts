@@ -70,7 +70,12 @@ export interface ArchiViewConnection {
   relationshipRef: string;
   sourceNodeRef: string;
   targetNodeRef: string;
-  waypoints: { x: number; y: number }[];
+  /**
+   * Intermediate bendpoints between source and target nodes (geen start/end —
+   * die worden door de renderer berekend uit de node-bboxes).
+   * Komt 1-op-1 uit OEF `<bendpoint x= y= />` kinderen.
+   */
+  bendpoints: { x: number; y: number }[];
 }
 
 export interface ArchiView {

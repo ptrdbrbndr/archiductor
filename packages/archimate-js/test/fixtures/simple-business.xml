@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/4.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       identifier="id-archiductor-sample-1">
+  <name xml:lang="nl">Eenvoudig Business-voorbeeld</name>
+  <documentation xml:lang="nl">Demo-model voor archimate-js parser-tests.</documentation>
+  <elements>
+    <element identifier="elem-1" xsi:type="BusinessProcess">
+      <name xml:lang="nl">Order verwerken</name>
+      <documentation xml:lang="nl">Verwerkt inkomende orders.</documentation>
+    </element>
+    <element identifier="elem-2" xsi:type="BusinessActor">
+      <name xml:lang="nl">Verkoper</name>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="rel-1" source="elem-1" target="elem-2" xsi:type="Assignment"/>
+  </relationships>
+  <views>
+    <diagrams>
+      <view identifier="view-1" xsi:type="Diagram">
+        <name xml:lang="nl">Hoofdview</name>
+        <node identifier="node-1" elementRef="elem-1" x="80" y="120" w="160" h="70" xsi:type="Element"/>
+        <node identifier="node-2" elementRef="elem-2" x="380" y="120" w="160" h="70" xsi:type="Element"/>
+        <connection identifier="conn-1" relationshipRef="rel-1" source="node-1" target="node-2" xsi:type="Relationship">
+          <bendpoint x="280" y="155"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

@@ -15,11 +15,14 @@ export { Viewer } from "./Viewer.js";
 export type { ViewerOptions } from "./Viewer.js";
 export { renderModule } from "./render/index.js";
 export { parseOpenExchange, serializeOpenExchange } from "./parse/index.js";
+export { detectLayer } from "./archimate-layers.js";
 export type {
   ArchiModel,
   ArchiElement,
   ArchiRelationship,
   ArchiView,
+  ArchiViewNode,
+  ArchiViewConnection,
   ArchiLayer,
   ArchiRelationshipType,
 } from "./types.js";

@@ -57,6 +57,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "diagram-js": "^15.14.0",
+    "happy-dom": "^20.9.0",
     "tiny-svg": "^4.1.4",
     "tsup": "^8.3.0",
     "vitest": "^2.1.0"

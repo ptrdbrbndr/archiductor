@@ -15,7 +15,7 @@ API is **niet stabiel** tot eerste stable release (M3, juli 2026 doel).
 `archimate-js` voegt ArchiMate-rendering toe aan [`diagram-js`](https://github.com/bpmn-io/diagram-js), Camunda's diagram-engine. Het volgt het patroon dat `bpmn-js`, `cmmn-js` en `dmn-js` ook gebruiken: één modeleer-taal als laag bovenop diagram-js' generieke graph-engine.
 
 ```ts
-import { Viewer } from '@archiductus/archimate-js';
+import { Viewer } from 'archimate-js';
 
 const viewer = new Viewer({
   container: '#archimate-canvas'
@@ -50,7 +50,7 @@ export function ArchiMateCanvas({ xml }: { xml: string }) {
     if (!ref.current) return;
     let viewer: { destroy?: () => void } | null = null;
     (async () => {
-      const { Viewer } = await import('@archiductus/archimate-js');
+      const { Viewer } = await import('archimate-js');
       const v = new Viewer({ container: ref.current });
       await v.importXML(xml);
       v.get('canvas').zoom('fit-viewport');

@@ -1,16 +1,16 @@
 {
-  "name": "@archiductus/archimate-js",
+  "name": "archimate-js",
   "version": "0.0.1",
   "description": "ArchiMate 3.2 + 4.0 viewer and modeler on diagram-js",
   "license": "MIT",
   "author": "Pieter de Brabander",
-  "homepage": "https://github.com/archiductus/archimate-js",
+  "homepage": "https://github.com/ptrdbrbndr/archimate-js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/archiductus/archimate-js.git"
+    "url": "git+https://github.com/ptrdbrbndr/archimate-js.git"
   },
   "bugs": {
-    "url": "https://github.com/archiductus/archimate-js/issues"
+    "url": "https://github.com/ptrdbrbndr/archimate-js/issues"
   },
   "type": "module",
   "main": "./dist/index.cjs",

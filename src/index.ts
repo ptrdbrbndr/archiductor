@@ -1,5 +1,5 @@
 /**
- * @archiductus/archimate-js
+ * archimate-js
  *
  * ArchiMate 3.2 + 4.0 viewer and modeler on diagram-js.
  *

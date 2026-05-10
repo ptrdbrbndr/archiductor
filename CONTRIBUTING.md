@@ -4,7 +4,7 @@ Dank dat je een bijdrage overweegt!
 
 ## Issues
 
-Voor bug-rapporten of feature-requests: open een issue op <https://github.com/archiductus/archimate-js/issues>. Vermeld bij bugs:
+Voor bug-rapporten of feature-requests: open een issue op <https://github.com/ptrdbrbndr/archimate-js/issues>. Vermeld bij bugs:
 
 - ArchiMate-versie van het bron-bestand (3.2 / 4.0)
 - Browser + versie (waar relevant)

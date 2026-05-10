@@ -34,7 +34,7 @@ export interface ViewerOptions {
 }
 
 interface DiagramCanvas {
-  setRootElement: (root: { id: string }) => void;
+  setRootElement: (root: { id: string; children?: unknown[] }) => void;
   addShape: (shape: unknown, parent?: unknown) => unknown;
   addConnection: (connection: unknown, parent?: unknown) => unknown;
   getRootElement: () => unknown;
@@ -153,7 +153,7 @@ export class Viewer {
     const elementFactory =
       this.diagram.get<DiagramElementFactory>("elementFactory");
 
-    canvas.setRootElement({ id: `root-${view.id}` });
+    canvas.setRootElement({ id: `root-${view.id}`, children: [] });
 
     const elementById = new Map<string, ArchiElement>(
       model.elements.map((e) => [e.id, e]),

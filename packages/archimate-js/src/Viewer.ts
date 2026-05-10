@@ -18,12 +18,17 @@ import type {
   ArchiElement,
   ArchiModel,
   ArchiRelationship,
-  ArchiView,
 } from "./types.js";
 
 export interface ViewerOptions {
   /** DOM element of CSS selector that hosts the canvas. */
   container: HTMLElement | string;
+  /**
+   * Enable de mini-map (overview-panel in canvas-hoek).
+   * Default: false. Wanneer true, wordt `diagram-js-minimap` geladen
+   * en automatisch in de canvas-container weergegeven.
+   */
+  minimap?: boolean;
   /** Additional diagram-js modules to load. Useful for plug-in features. */
   additionalModules?: unknown[];
 }
@@ -50,19 +55,55 @@ interface DiagramElementFactory {
 export class Viewer {
   private diagram: Diagram;
   private model: ArchiModel | null = null;
+  private options: ViewerOptions;
 
+  /**
+   * Sync constructor — alleen core-modules (geen minimap). Voor minimap
+   * support: gebruik `Viewer.create()` die de minimap-module asynchroon laadt.
+   */
   constructor(options: ViewerOptions) {
+    this.options = options;
     const container = resolveContainer(options.container);
+    const modules: unknown[] = [
+      renderModule,
+      ZoomScrollModule,
+      MoveCanvasModule,
+    ];
+    if (options.additionalModules) modules.push(...options.additionalModules);
+
     this.diagram = new Diagram({
       canvas: { container },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      modules: [
-        renderModule,
-        ZoomScrollModule,
-        MoveCanvasModule,
-        ...(options.additionalModules ?? []),
-      ] as any,
+      modules: modules as any,
     });
+  }
+
+  /**
+   * Async factory die de viewer creëert met optionele minimap.
+   *
+   * `diagram-js-minimap` heeft een CJS-build die niet schoon laadt in
+   * Node-test-omgevingen via top-level import — daarom dynamic import
+   * achter een feature-flag. In een echte browser-bundle (Next.js, Vite)
+   * werkt deze pad probleemloos en is de async-overhead 1 micro-task.
+   */
+  static async create(options: ViewerOptions): Promise<Viewer> {
+    if (!options.minimap) return new Viewer(options);
+
+    const minimapModule = await import("diagram-js-minimap");
+    const MinimapModule = minimapModule.default;
+    const viewer = new Viewer({
+      ...options,
+      additionalModules: [MinimapModule, ...(options.additionalModules ?? [])],
+    });
+
+    try {
+      const minimap = viewer.diagram.get<{ open: () => void }>("minimap");
+      minimap.open();
+    } catch {
+      // Minimap-service niet beschikbaar (bv. happy-dom mist DOM-API's
+      // die de minimap nodig heeft) — viewer blijft werken zonder.
+    }
+    return viewer;
   }
 
   /**

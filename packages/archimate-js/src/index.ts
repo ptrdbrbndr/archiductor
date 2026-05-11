@@ -18,6 +18,12 @@ export { Modeler } from "./Modeler.js";
 export type { ModelerOptions } from "./Modeler.js";
 export { renderModule } from "./render/index.js";
 export { paletteModule } from "./palette/index.js";
+export { contextPadModule } from "./context-pad/index.js";
+export {
+  archimateModelingModule,
+  UpdateBusinessObjectHandler,
+} from "./modeling/index.js";
+export type { UpdateBusinessObjectContext } from "./modeling/index.js";
 export { parseOpenExchange, serializeOpenExchange } from "./parse/index.js";
 export { detectLayer } from "./archimate-layers.js";
 export type {

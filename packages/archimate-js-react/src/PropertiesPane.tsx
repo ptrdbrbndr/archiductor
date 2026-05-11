@@ -1,9 +1,12 @@
 /**
- * <PropertiesPane> — read-only properties-panel rechts van canvas.
+ * <PropertiesPane> — properties-panel rechts van canvas.
  *
- * Toont de gegevens van het op dit moment geselecteerde element of relatie
- * uit een ArchiModel: naam, type, laag, documentation, en (indien aanwezig)
- * custom properties. Bij geen selectie: empty-state met instructie.
+ * Twee modi:
+ *  - **read-only** (default, `editable=false`): toont de gegevens van het op
+ *    dit moment geselecteerde element of relatie uit een ArchiModel.
+ *  - **editable** (`editable=true`, M4-b): inputs voor naam + documentation +
+ *    "Verwijderen" knop. Consumers dispatchen via `onUpdateElement` /
+ *    `onUpdateRelationship` / `onDeleteElement` / `onDeleteRelationship`.
  *
  * Werkt symmetrisch met <ModelExplorer> — beide hebben dezelfde
  * selectedElementId-prop. Een consumer (Dashboard) bindt de twee samen via
@@ -14,9 +17,10 @@
  *  - Lijst van eigenschappen als <dl> (definition list)
  *  - aria-live polite zodat een screen-reader bij selectie-wisseling de
  *    nieuwe inhoud aankondigt
+ *  - Inputs hebben labels via <label htmlFor>
  */
 
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import type { ArchiLayer, ArchiModel, ArchiRelationship } from "archimate-js";
 
@@ -30,16 +34,38 @@ const LAYER_LABELS: Record<ArchiLayer, string> = {
   implementation: "Implementation",
 };
 
+export interface ElementPatch {
+  name?: string;
+  documentation?: string;
+}
+
+export interface RelationshipPatch {
+  name?: string;
+  documentation?: string;
+}
+
 export interface PropertiesPaneProps {
   model: ArchiModel | null;
   selectedElementId?: string;
   selectedRelationshipId?: string;
+  /** Edit-mode activeren. Standaard `false` (read-only). */
+  editable?: boolean;
+  onUpdateElement?: (id: string, patch: ElementPatch) => void;
+  onUpdateRelationship?: (id: string, patch: RelationshipPatch) => void;
+  /** Cascade-confirmation is verantwoordelijkheid van de consumer. */
+  onDeleteElement?: (id: string) => void;
+  onDeleteRelationship?: (id: string) => void;
 }
 
 export function PropertiesPane({
   model,
   selectedElementId,
   selectedRelationshipId,
+  editable = false,
+  onUpdateElement,
+  onUpdateRelationship,
+  onDeleteElement,
+  onDeleteRelationship,
 }: PropertiesPaneProps) {
   const element =
     model && selectedElementId
@@ -81,9 +107,22 @@ export function PropertiesPane({
       aria-live="polite"
       style={baseStyle}
     >
-      {element && <ElementProperties element={element} />}
+      {element && (
+        <ElementProperties
+          element={element}
+          editable={editable}
+          onUpdate={onUpdateElement}
+          onDelete={onDeleteElement}
+        />
+      )}
       {relationship && model && (
-        <RelationshipProperties relationship={relationship} model={model} />
+        <RelationshipProperties
+          relationship={relationship}
+          model={model}
+          editable={editable}
+          onUpdate={onUpdateRelationship}
+          onDelete={onDeleteRelationship}
+        />
       )}
     </aside>
   );
@@ -91,9 +130,25 @@ export function PropertiesPane({
 
 function ElementProperties({
   element,
+  editable,
+  onUpdate,
+  onDelete,
 }: {
   element: ArchiModel["elements"][number];
+  editable: boolean;
+  onUpdate?: (id: string, patch: ElementPatch) => void;
+  onDelete?: (id: string) => void;
 }) {
+  if (editable && onUpdate) {
+    return (
+      <EditableElementSection
+        element={element}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+      />
+    );
+  }
+
   return (
     <section data-testid="properties-pane-element">
       <h2
@@ -148,15 +203,145 @@ function ElementProperties({
   );
 }
 
+function EditableElementSection({
+  element,
+  onUpdate,
+  onDelete,
+}: {
+  element: ArchiModel["elements"][number];
+  onUpdate: (id: string, patch: ElementPatch) => void;
+  onDelete?: (id: string) => void;
+}) {
+  // Lokale state om typen niet voor elke keystroke door de modeling-service
+  // te jagen. On-blur (en debounce-vrij submit) commit het naar de canvas.
+  const [name, setName] = useState(element.name);
+  const [documentation, setDocumentation] = useState(element.documentation ?? "");
+
+  // Sync wanneer een ander element wordt geselecteerd of externe wijziging
+  // landt (bv. via canvas-edit door iemand anders).
+  useEffect(() => {
+    setName(element.name);
+    setDocumentation(element.documentation ?? "");
+  }, [element.id, element.name, element.documentation]);
+
+  const commitName = () => {
+    if (name.trim() !== element.name) {
+      onUpdate(element.id, { name: name.trim() || element.name });
+    }
+  };
+  const commitDocumentation = () => {
+    const next = documentation.trim() || undefined;
+    if (next !== element.documentation) {
+      onUpdate(element.id, { documentation: next });
+    }
+  };
+
+  return (
+    <section data-testid="properties-pane-element-editable">
+      <div style={{ marginBottom: "0.75rem" }}>
+        <label
+          htmlFor={`pp-name-${element.id}`}
+          style={labelStyle}
+        >
+          Naam
+        </label>
+        <input
+          id={`pp-name-${element.id}`}
+          data-testid="properties-pane-name-input"
+          type="text"
+          value={name}
+          maxLength={400}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commitName}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              (e.currentTarget as HTMLInputElement).blur();
+            }
+          }}
+          style={inputStyle}
+        />
+      </div>
+      <dl style={dlStyle}>
+        <PropertyRow
+          label="ArchiMate-type"
+          value={element.type}
+          testid="properties-pane-type"
+        />
+        <PropertyRow
+          label="Laag"
+          value={LAYER_LABELS[element.layer]}
+          testid="properties-pane-layer"
+        />
+        <PropertyRow
+          label="ID"
+          value={element.id}
+          testid="properties-pane-id"
+          mono
+        />
+      </dl>
+      <div style={{ marginTop: "0.75rem" }}>
+        <label
+          htmlFor={`pp-doc-${element.id}`}
+          style={labelStyle}
+        >
+          Documentation
+        </label>
+        <textarea
+          id={`pp-doc-${element.id}`}
+          data-testid="properties-pane-documentation-input"
+          value={documentation}
+          rows={4}
+          maxLength={4000}
+          onChange={(e) => setDocumentation(e.target.value)}
+          onBlur={commitDocumentation}
+          style={{ ...inputStyle, resize: "vertical", minHeight: "4rem" }}
+        />
+      </div>
+      {onDelete && (
+        <div style={{ marginTop: "1rem" }}>
+          <button
+            type="button"
+            data-testid="properties-pane-delete-element"
+            onClick={() => onDelete(element.id)}
+            style={dangerButtonStyle}
+            aria-label={`Verwijder element ${element.name}`}
+          >
+            Verwijderen
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function RelationshipProperties({
   relationship,
   model,
+  editable,
+  onUpdate,
+  onDelete,
 }: {
   relationship: ArchiRelationship;
   model: ArchiModel;
+  editable: boolean;
+  onUpdate?: (id: string, patch: RelationshipPatch) => void;
+  onDelete?: (id: string) => void;
 }) {
   const source = model.elements.find((e) => e.id === relationship.source);
   const target = model.elements.find((e) => e.id === relationship.target);
+
+  if (editable && onUpdate) {
+    return (
+      <EditableRelationshipSection
+        relationship={relationship}
+        sourceName={source?.name ?? relationship.source}
+        targetName={target?.name ?? relationship.target}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+      />
+    );
+  }
+
   return (
     <section data-testid="properties-pane-relationship">
       <h2
@@ -193,12 +378,126 @@ function RelationshipProperties({
   );
 }
 
+function EditableRelationshipSection({
+  relationship,
+  sourceName,
+  targetName,
+  onUpdate,
+  onDelete,
+}: {
+  relationship: ArchiRelationship;
+  sourceName: string;
+  targetName: string;
+  onUpdate: (id: string, patch: RelationshipPatch) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const [name, setName] = useState(relationship.name ?? "");
+
+  useEffect(() => {
+    setName(relationship.name ?? "");
+  }, [relationship.id, relationship.name]);
+
+  const commitName = () => {
+    const next = name.trim() || undefined;
+    if (next !== relationship.name) {
+      onUpdate(relationship.id, { name: next });
+    }
+  };
+
+  return (
+    <section data-testid="properties-pane-relationship-editable">
+      <div style={{ marginBottom: "0.75rem" }}>
+        <label
+          htmlFor={`pp-rel-name-${relationship.id}`}
+          style={labelStyle}
+        >
+          Naam (optioneel)
+        </label>
+        <input
+          id={`pp-rel-name-${relationship.id}`}
+          data-testid="properties-pane-rel-name-input"
+          type="text"
+          value={name}
+          maxLength={400}
+          placeholder={`${relationship.type} relatie`}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commitName}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              (e.currentTarget as HTMLInputElement).blur();
+            }
+          }}
+          style={inputStyle}
+        />
+      </div>
+      <dl style={dlStyle}>
+        <PropertyRow
+          label="Type"
+          value={relationship.type}
+          testid="properties-pane-type"
+        />
+        <PropertyRow
+          label="Bron"
+          value={sourceName}
+          testid="properties-pane-source"
+        />
+        <PropertyRow
+          label="Doel"
+          value={targetName}
+          testid="properties-pane-target"
+        />
+      </dl>
+      {onDelete && (
+        <div style={{ marginTop: "1rem" }}>
+          <button
+            type="button"
+            data-testid="properties-pane-delete-relationship"
+            onClick={() => onDelete(relationship.id)}
+            style={dangerButtonStyle}
+            aria-label="Verwijder relatie"
+          >
+            Verwijderen
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 const dlStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "max-content 1fr",
   columnGap: "0.5rem",
   rowGap: "0.25rem",
   margin: 0,
+};
+
+const labelStyle: CSSProperties = {
+  display: "block",
+  color: "#666",
+  fontWeight: 500,
+  marginBottom: "0.25rem",
+};
+
+const inputStyle: CSSProperties = {
+  width: "100%",
+  padding: "0.375rem 0.5rem",
+  border: "1px solid #ccc",
+  borderRadius: "4px",
+  fontSize: "0.875rem",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+};
+
+const dangerButtonStyle: CSSProperties = {
+  padding: "0.4rem 0.75rem",
+  border: "1px solid #c8302d",
+  borderRadius: "4px",
+  background: "#fff5f5",
+  color: "#c8302d",
+  fontSize: "0.875rem",
+  fontWeight: 600,
+  cursor: "pointer",
 };
 
 function PropertyRow({

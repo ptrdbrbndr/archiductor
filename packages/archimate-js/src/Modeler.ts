@@ -15,12 +15,16 @@ import SelectionModule from "diagram-js/lib/features/selection/index.js";
 import MoveModule from "diagram-js/lib/features/move/index.js";
 import OutlineModule from "diagram-js/lib/features/outline/index.js";
 import CreateModule from "diagram-js/lib/features/create/index.js";
+import ConnectModule from "diagram-js/lib/features/connect/index.js";
+import ContextPadModule from "diagram-js/lib/features/context-pad/index.js";
 import PaletteModule from "diagram-js/lib/features/palette/index.js";
 import KeyboardModule from "diagram-js/lib/features/keyboard/index.js";
 import RulesModule from "diagram-js/lib/features/rules/index.js";
 
 import { renderModule } from "./render/index.js";
 import { paletteModule } from "./palette/index.js";
+import { contextPadModule } from "./context-pad/index.js";
+import { archimateModelingModule } from "./modeling/index.js";
 import { parseOpenExchange } from "./parse/index.js";
 import { detectLayer } from "./archimate-layers.js";
 import type {
@@ -109,7 +113,11 @@ export class Modeler {
       MoveModule,
       RulesModule,
       ModelingModule,
+      archimateModelingModule,
       CreateModule,
+      ConnectModule,
+      ContextPadModule,
+      contextPadModule,
       PaletteModule,
       paletteModule,
       KeyboardModule,

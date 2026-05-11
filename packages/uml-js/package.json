@@ -1,0 +1,66 @@
+{
+  "name": "uml-js",
+  "version": "0.0.1",
+  "description": "UML 2.5 class diagram viewer on diagram-js",
+  "license": "MIT",
+  "author": "Pieter de Brabander",
+  "homepage": "https://github.com/ptrdbrbndr/archiductor/tree/main/packages/uml-js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ptrdbrbndr/archiductor.git",
+    "directory": "packages/uml-js"
+  },
+  "bugs": {
+    "url": "https://github.com/ptrdbrbndr/archiductor/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'lint TBD' && exit 0"
+  },
+  "keywords": [
+    "uml",
+    "uml2",
+    "class-diagram",
+    "diagram-js",
+    "xmi",
+    "eclipse-uml2"
+  ],
+  "peerDependencies": {
+    "diagram-js": "^15.0.0",
+    "tiny-svg": "^4.0.0"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "diagram-js": "^15.14.0",
+    "happy-dom": "^20.9.0",
+    "tiny-svg": "^4.1.4",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

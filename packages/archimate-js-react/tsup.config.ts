@@ -7,6 +7,6 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: ["react", "react-dom", "archimate-js", "bpmn-js"],
+  external: ["react", "react-dom", "archimate-js", "bpmn-js", "cmmn-js", "dmn-js"],
   target: "es2022",
 });

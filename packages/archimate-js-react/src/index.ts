@@ -8,3 +8,7 @@ export type {
 } from "./PropertiesPane.js";
 export { BpmnViewer } from "./BpmnViewer.js";
 export type { BpmnViewerProps } from "./BpmnViewer.js";
+export { CmmnViewer } from "./CmmnViewer.js";
+export type { CmmnViewerProps } from "./CmmnViewer.js";
+export { DmnViewer } from "./DmnViewer.js";
+export type { DmnViewerProps } from "./DmnViewer.js";

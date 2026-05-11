@@ -6,3 +6,5 @@ export type {
   ElementPatch,
   RelationshipPatch,
 } from "./PropertiesPane.js";
+export { BpmnViewer } from "./BpmnViewer.js";
+export type { BpmnViewerProps } from "./BpmnViewer.js";

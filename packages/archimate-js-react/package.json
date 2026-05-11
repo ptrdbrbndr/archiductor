@@ -61,5 +61,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "bpmn-js": "^18.16.1"
   }
 }

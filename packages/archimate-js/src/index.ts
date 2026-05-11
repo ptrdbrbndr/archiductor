@@ -27,6 +27,7 @@ export type { UpdateBusinessObjectContext } from "./modeling/index.js";
 export { parseOpenExchange, serializeOpenExchange } from "./parse/index.js";
 export { parseCoArchi } from "./parse/coarchi.js";
 export type { CoArchiFileMap } from "./parse/coarchi.js";
+export { serializeCoArchi } from "./parse/serialize-coarchi.js";
 export { detectLayer } from "./archimate-layers.js";
 export type {
   ArchiModel,

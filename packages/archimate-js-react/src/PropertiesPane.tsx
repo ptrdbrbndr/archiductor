@@ -91,7 +91,7 @@ export function PropertiesPane({
         data-testid="properties-pane-empty"
         role="complementary"
         aria-label="Eigenschappen (geen selectie)"
-        style={{ ...baseStyle, color: "#666" }}
+        style={{ ...baseStyle, opacity: 0.6 }}
       >
         Selecteer een element in de boom of op het canvas om eigenschappen te
         zien.
@@ -474,7 +474,7 @@ const dlStyle: CSSProperties = {
 
 const labelStyle: CSSProperties = {
   display: "block",
-  color: "#666",
+  opacity: 0.65,
   fontWeight: 500,
   marginBottom: "0.25rem",
 };
@@ -482,8 +482,10 @@ const labelStyle: CSSProperties = {
 const inputStyle: CSSProperties = {
   width: "100%",
   padding: "0.375rem 0.5rem",
-  border: "1px solid #ccc",
+  border: "1px solid currentColor",
   borderRadius: "4px",
+  background: "transparent",
+  color: "inherit",
   fontSize: "0.875rem",
   fontFamily: "inherit",
   boxSizing: "border-box",
@@ -491,10 +493,10 @@ const inputStyle: CSSProperties = {
 
 const dangerButtonStyle: CSSProperties = {
   padding: "0.4rem 0.75rem",
-  border: "1px solid #c8302d",
+  border: "1px solid currentColor",
   borderRadius: "4px",
-  background: "#fff5f5",
-  color: "#c8302d",
+  background: "transparent",
+  color: "#dc2626",
   fontSize: "0.875rem",
   fontWeight: 600,
   cursor: "pointer",
@@ -513,14 +515,14 @@ function PropertyRow({
 }) {
   return (
     <>
-      <dt style={{ color: "#666", fontWeight: 500 }}>{label}</dt>
+      <dt style={{ opacity: 0.65, fontWeight: 500 }}>{label}</dt>
       <dd
         data-testid={testid}
         style={{
           margin: 0,
           fontFamily: mono ? "ui-monospace, monospace" : "inherit",
           fontSize: mono ? "0.8rem" : "inherit",
-          color: "#222",
+          color: "inherit",
           wordBreak: "break-word",
         }}
       >

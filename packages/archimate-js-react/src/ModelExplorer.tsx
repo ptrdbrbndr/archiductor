@@ -67,7 +67,7 @@ export function ModelExplorer({
         aria-label="Model explorer (geen model geladen)"
         style={{
           padding: "0.75rem",
-          color: "#666",
+          opacity: 0.65,
           fontSize: "0.875rem",
           fontFamily: "system-ui, sans-serif",
         }}
@@ -103,7 +103,7 @@ export function ModelExplorer({
     >
       <header style={{ marginBottom: "0.75rem" }}>
         <strong data-testid="model-explorer-model-name">{model.name}</strong>
-        <div style={{ color: "#666", fontSize: "0.75rem" }}>
+        <div style={{ opacity: 0.65, fontSize: "0.75rem" }}>
           {totalElements} {totalElements === 1 ? "element" : "elementen"} ·{" "}
           {totalRelationships}{" "}
           {totalRelationships === 1 ? "relatie" : "relaties"} ·{" "}
@@ -139,7 +139,7 @@ export function ModelExplorer({
                   height: 10,
                   borderRadius: 2,
                   background: dot,
-                  border: "1px solid #999",
+                  border: "1px solid currentColor",
                   marginRight: "0.5rem",
                   verticalAlign: "middle",
                 }}
@@ -147,7 +147,7 @@ export function ModelExplorer({
               {LAYER_LABELS[layer]}{" "}
               <span
                 style={{
-                  color: "#888",
+                  opacity: 0.6,
                   fontWeight: 400,
                   fontSize: "0.75rem",
                 }}
@@ -173,7 +173,9 @@ export function ModelExplorer({
                       aria-label={`${element.name} — ${element.type} in ${LAYER_LABELS[layer]} laag`}
                       aria-current={isSelected ? "true" : undefined}
                       style={{
-                        background: isSelected ? "#e6f0ff" : "transparent",
+                        background: isSelected
+                          ? "color-mix(in srgb, currentColor 12%, transparent)"
+                          : "transparent",
                         border: "none",
                         cursor: "pointer",
                         padding: "0.2rem 0.4rem",
@@ -182,11 +184,11 @@ export function ModelExplorer({
                         borderRadius: 3,
                         fontFamily: "inherit",
                         fontSize: "inherit",
-                        color: "#222",
+                        color: "inherit",
                       }}
                     >
                       {element.name}{" "}
-                      <span style={{ color: "#888", fontSize: "0.75rem" }}>
+                      <span style={{ opacity: 0.6, fontSize: "0.75rem" }}>
                         {element.type}
                       </span>
                     </button>

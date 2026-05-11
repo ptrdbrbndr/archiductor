@@ -19,6 +19,7 @@ import ConnectModule from "diagram-js/lib/features/connect/index.js";
 import ContextPadModule from "diagram-js/lib/features/context-pad/index.js";
 import PaletteModule from "diagram-js/lib/features/palette/index.js";
 import KeyboardModule from "diagram-js/lib/features/keyboard/index.js";
+import EditorActionsModule from "diagram-js/lib/features/editor-actions/index.js";
 import RulesModule from "diagram-js/lib/features/rules/index.js";
 
 import { renderModule } from "./render/index.js";
@@ -121,6 +122,7 @@ export class Modeler {
       PaletteModule,
       paletteModule,
       KeyboardModule,
+      EditorActionsModule,
     ];
     if (options.additionalModules) modules.push(...options.additionalModules);
 
@@ -139,14 +141,18 @@ export class Modeler {
   }
 
   /**
-   * Reconstrueer een ArchiModel uit de huidige canvas-state. Roept de bestaande
-   * elements/relationships door (om properties + documentation te bewaren) en
-   * herschrijft alleen de view-nodes/connections + nieuwe elements die via
-   * palette zijn toegevoegd.
+   * Reconstrueer een ArchiModel uit de huidige canvas-state.
    *
-   * Reden voor de pass-through: M4-a-palette voegt elements toe maar wijzigt
-   * geen bestaande element-data; pas in M4-b komt PropertiesPane-edit waarbij
-   * we hier de bewerkingen oogsten.
+   * **Canvas businessObject is source-of-truth.** Elke shape met
+   * `businessObject.elementId` produceert (na cascade) één ArchiElement met
+   * de huidige naam/type/laag/documentation. Velden die niet in
+   * businessObject zitten (custom `properties`) komen uit de bestaande
+   * model-state. Shapes zonder elementId worden overgeslagen (root, label-
+   * shapes). Elements die niet meer op het canvas staan worden **niet**
+   * doorgegeven — delete-flow.
+   *
+   * Connections analoog: relationships volgen `conn.businessObject` +
+   * fallback uit bestaande model-state.
    */
   exportModel(): ArchiModel {
     if (!this.model) throw new Error("Modeler heeft geen model geladen");
@@ -158,37 +164,37 @@ export class Modeler {
     const shapes = all.filter(isShape);
     const connections = all.filter(isConnection);
 
-    // Hergebruik bestaande elements + relationships als source-of-truth; nieuwe
-    // shapes met `businessObject.elementId` die niet in model.elements zitten
-    // worden toegevoegd. View-nodes/connections worden volledig vervangen door
-    // de canvas-state.
-    const existingElementsById = new Map(this.model.elements.map((e) => [e.id, e]));
+    // Bestaande model-state als fallback voor velden die niet in
+    // businessObject zitten (custom properties).
+    const existingElementsById = new Map(
+      this.model.elements.map((e) => [e.id, e]),
+    );
     const existingRelationshipsById = new Map(
       this.model.relationships.map((r) => [r.id, r]),
     );
 
-    const elements: ArchiElement[] = [...this.model.elements];
-    const relationships: ArchiRelationship[] = [...this.model.relationships];
+    const elements: ArchiElement[] = [];
+    const relationships: ArchiRelationship[] = [];
 
     const viewNodes: ArchiViewNode[] = [];
     const viewConnections: ArchiViewConnection[] = [];
 
     for (const shape of shapes) {
       const bo = shape.businessObject;
-      if (!bo) continue;
-      const elementId = bo.elementId ?? `el-${shape.id}`;
+      if (!bo?.elementId) continue;
 
-      if (!existingElementsById.has(elementId)) {
-        const archimateType = bo.archimateType ?? "BusinessObject";
-        elements.push({
-          id: elementId,
-          name: bo.name ?? archimateType,
-          type: archimateType,
-          layer: bo.layer ?? detectLayer(archimateType),
-          documentation: bo.documentation,
-        });
-        existingElementsById.set(elementId, elements[elements.length - 1]!);
-      }
+      const elementId = bo.elementId;
+      const existing = existingElementsById.get(elementId);
+      const archimateType = bo.archimateType ?? existing?.type ?? "BusinessObject";
+
+      elements.push({
+        id: elementId,
+        name: bo.name ?? existing?.name ?? archimateType,
+        type: archimateType,
+        layer: bo.layer ?? existing?.layer ?? detectLayer(archimateType),
+        documentation: bo.documentation ?? existing?.documentation,
+        properties: existing?.properties,
+      });
 
       viewNodes.push({
         id: shape.id,
@@ -203,6 +209,7 @@ export class Modeler {
     for (const conn of connections) {
       const bo = conn.businessObject;
       const relationshipId = bo?.relationshipId ?? `rel-${conn.id}`;
+      const existing = existingRelationshipsById.get(relationshipId);
 
       // Source/target ArchiElement-ids ophalen via shape-businessObjects
       const sourceBo = conn.source.businessObject;
@@ -210,19 +217,15 @@ export class Modeler {
       const sourceElementId = sourceBo?.elementId ?? `el-${conn.source.id}`;
       const targetElementId = targetBo?.elementId ?? `el-${conn.target.id}`;
 
-      if (!existingRelationshipsById.has(relationshipId)) {
-        relationships.push({
-          id: relationshipId,
-          type: bo?.archimateType ?? "Association",
-          source: sourceElementId,
-          target: targetElementId,
-          name: bo?.name,
-        });
-        existingRelationshipsById.set(
-          relationshipId,
-          relationships[relationships.length - 1]!,
-        );
-      }
+      relationships.push({
+        id: relationshipId,
+        type: bo?.archimateType ?? existing?.type ?? "Association",
+        source: sourceElementId,
+        target: targetElementId,
+        name: bo?.name ?? existing?.name,
+        documentation: existing?.documentation,
+        properties: existing?.properties,
+      });
 
       // Strip de auto-berekende start/end waypoints (renderer berekent ze opnieuw)
       const middleBendpoints = conn.waypoints.slice(1, -1).map((w) => ({
@@ -281,6 +284,44 @@ export class Modeler {
 
   getModel(): ArchiModel | null {
     return this.model;
+  }
+
+  /** Undo de laatste command-stack mutatie (no-op als stack leeg). */
+  undo(): void {
+    try {
+      const cs = this.diagram.get<{ undo: () => void }>("commandStack");
+      cs.undo();
+    } catch {
+      /* commandStack ontbreekt in test-env zonder Modeling */
+    }
+  }
+
+  /** Redo de laatste undone command (no-op als geen redo-actie beschikbaar). */
+  redo(): void {
+    try {
+      const cs = this.diagram.get<{ redo: () => void }>("commandStack");
+      cs.redo();
+    } catch {
+      /* commandStack ontbreekt in test-env zonder Modeling */
+    }
+  }
+
+  canUndo(): boolean {
+    try {
+      const cs = this.diagram.get<{ canUndo: () => boolean }>("commandStack");
+      return cs.canUndo();
+    } catch {
+      return false;
+    }
+  }
+
+  canRedo(): boolean {
+    try {
+      const cs = this.diagram.get<{ canRedo: () => boolean }>("commandStack");
+      return cs.canRedo();
+    } catch {
+      return false;
+    }
   }
 
   private renderModel(model: ArchiModel): void {

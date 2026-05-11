@@ -12,3 +12,5 @@ coverage/
 .idea/
 *.tsbuildinfo
 **/*.tsbuildinfo
+*.tgz
+**/*.tgz

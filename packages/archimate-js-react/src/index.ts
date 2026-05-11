@@ -12,3 +12,5 @@ export { CmmnViewer } from "./CmmnViewer.js";
 export type { CmmnViewerProps } from "./CmmnViewer.js";
 export { DmnViewer } from "./DmnViewer.js";
 export type { DmnViewerProps } from "./DmnViewer.js";
+export { UmlViewer } from "./UmlViewer.js";
+export type { UmlViewerProps } from "./UmlViewer.js";

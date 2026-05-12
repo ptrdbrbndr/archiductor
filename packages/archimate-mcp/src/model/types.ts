@@ -1,40 +1,60 @@
-// ArchiMate 3.x type definitions
+export type ArchiMateLayer =
+  | 'motivation'
+  | 'strategy'
+  | 'business'
+  | 'application'
+  | 'technology'
+  | 'physical'
+  | 'implementation_migration';
 
-export type ArchiMateLayer = "Business" | "Application" | "Technology" | "Motivation" | "Implementation" | "Strategy";
+export type ArchiMateElementType =
+  | 'Stakeholder' | 'Driver' | 'Assessment' | 'Goal' | 'Outcome'
+  | 'Principle' | 'Requirement' | 'Constraint' | 'Meaning' | 'Value'
+  | 'Resource' | 'Capability' | 'CourseOfAction' | 'ValueStream'
+  | 'BusinessActor' | 'BusinessRole' | 'BusinessCollaboration'
+  | 'BusinessInterface' | 'BusinessProcess' | 'BusinessFunction'
+  | 'BusinessInteraction' | 'BusinessEvent' | 'BusinessService'
+  | 'BusinessObject' | 'Contract' | 'Representation' | 'Product'
+  | 'ApplicationComponent' | 'ApplicationCollaboration'
+  | 'ApplicationInterface' | 'ApplicationFunction' | 'ApplicationInteraction'
+  | 'ApplicationProcess' | 'ApplicationEvent' | 'ApplicationService' | 'DataObject'
+  | 'Node' | 'Device' | 'SystemSoftware' | 'TechnologyCollaboration'
+  | 'TechnologyInterface' | 'Path' | 'CommunicationNetwork'
+  | 'TechnologyFunction' | 'TechnologyProcess' | 'TechnologyInteraction'
+  | 'TechnologyEvent' | 'TechnologyService' | 'Artifact'
+  | 'Equipment' | 'Facility' | 'DistributionNetwork' | 'Material'
+  | 'WorkPackage' | 'Deliverable' | 'ImplementationEvent' | 'Plateau' | 'Gap'
+  | 'Grouping' | 'Location' | 'Junction';
 
 export type ArchiMateRelationType =
-  | "Association"
-  | "Access"
-  | "Influence"
-  | "Triggering"
-  | "Flow"
-  | "Specialization"
-  | "Aggregation"
-  | "Composition"
-  | "Realization"
-  | "Assignment"
-  | "Serving";
+  | 'Association' | 'Specialization' | 'Realization' | 'Composition'
+  | 'Aggregation' | 'Assignment' | 'Serving' | 'Access'
+  | 'Influence' | 'Triggering' | 'Flow';
 
-export type ArchiMateViewpointType =
-  | "Organization"
-  | "Actor_Cooperation"
-  | "Business_Process"
-  | "Business_Function"
-  | "Business_Interaction"
-  | "Product"
-  | "Application_Usage"
-  | "Application_Cooperation"
-  | "Application_Behavior"
-  | "Technology_Usage"
-  | "Infrastructure_Usage"
-  | "Infrastructure"
-  | "Implementation_Deployment"
-  | "Information_Structure"
-  | "Service_Realization"
-  | "Layered"
-  | "Physical"
-  | "Total"
-  | string; // allow custom viewpoint types from Open Exchange Format
+export const ELEMENT_LAYER: Record<string, ArchiMateLayer> = {
+  Stakeholder: 'motivation', Driver: 'motivation', Assessment: 'motivation',
+  Goal: 'motivation', Outcome: 'motivation', Principle: 'motivation',
+  Requirement: 'motivation', Constraint: 'motivation', Meaning: 'motivation', Value: 'motivation',
+  Resource: 'strategy', Capability: 'strategy', CourseOfAction: 'strategy', ValueStream: 'strategy',
+  BusinessActor: 'business', BusinessRole: 'business', BusinessCollaboration: 'business',
+  BusinessInterface: 'business', BusinessProcess: 'business', BusinessFunction: 'business',
+  BusinessInteraction: 'business', BusinessEvent: 'business', BusinessService: 'business',
+  BusinessObject: 'business', Contract: 'business', Representation: 'business', Product: 'business',
+  ApplicationComponent: 'application', ApplicationCollaboration: 'application',
+  ApplicationInterface: 'application', ApplicationFunction: 'application',
+  ApplicationInteraction: 'application', ApplicationProcess: 'application',
+  ApplicationEvent: 'application', ApplicationService: 'application', DataObject: 'application',
+  Node: 'technology', Device: 'technology', SystemSoftware: 'technology',
+  TechnologyCollaboration: 'technology', TechnologyInterface: 'technology',
+  Path: 'technology', CommunicationNetwork: 'technology', TechnologyFunction: 'technology',
+  TechnologyProcess: 'technology', TechnologyInteraction: 'technology',
+  TechnologyEvent: 'technology', TechnologyService: 'technology', Artifact: 'technology',
+  Equipment: 'physical', Facility: 'physical', DistributionNetwork: 'physical', Material: 'physical',
+  WorkPackage: 'implementation_migration', Deliverable: 'implementation_migration',
+  ImplementationEvent: 'implementation_migration', Plateau: 'implementation_migration',
+  Gap: 'implementation_migration',
+  Grouping: 'application', Location: 'business', Junction: 'application',
+};
 
 export interface ArchiMateProperty {
   key: string;
@@ -44,10 +64,10 @@ export interface ArchiMateProperty {
 export interface ArchiMateElement {
   id: string;
   name: string;
-  type: string;           // e.g. "BusinessActor", "ApplicationComponent", "TechnologyService"
+  type: ArchiMateElementType;
   layer: ArchiMateLayer;
   documentation?: string;
-  properties?: ArchiMateProperty[];
+  properties: ArchiMateProperty[];
 }
 
 export interface ArchiMateRelation {
@@ -57,61 +77,26 @@ export interface ArchiMateRelation {
   targetId: string;
   name?: string;
   documentation?: string;
-  properties?: ArchiMateProperty[];
+  properties: ArchiMateProperty[];
 }
 
-export interface ArchiMateViewNode {
+export interface ArchiMateViewElement {
   elementId: string;
-  x?: number;
-  y?: number;
-  w?: number;
-  h?: number;
-}
-
-export interface ArchiMateViewConnection {
-  relationId: string;
 }
 
 export interface ArchiMateView {
   id: string;
   name: string;
-  viewpointType?: ArchiMateViewpointType;
-  elementIds: string[];
-  relationIds: string[];
-  nodes?: ArchiMateViewNode[];
-  connections?: ArchiMateViewConnection[];
+  viewpoint?: string;
+  elements: ArchiMateViewElement[];
+  relations: string[];
 }
 
 export interface ArchiMateModel {
   id: string;
   name: string;
   documentation?: string;
-  elements: ArchiMateElement[];
-  relations: ArchiMateRelation[];
-  views: ArchiMateView[];
-}
-
-// Layer inference map: element type prefix → layer
-export const ELEMENT_TYPE_LAYER_MAP: Record<string, ArchiMateLayer> = {
-  Business: "Business",
-  Application: "Application",
-  Technology: "Technology",
-  Physical: "Technology",
-  Motivation: "Motivation",
-  Implementation: "Implementation",
-  Strategy: "Strategy",
-};
-
-/**
- * Infer the ArchiMate layer from an element type string.
- * E.g. "BusinessActor" → "Business", "ApplicationComponent" → "Application"
- */
-export function inferLayer(elementType: string): ArchiMateLayer {
-  for (const [prefix, layer] of Object.entries(ELEMENT_TYPE_LAYER_MAP)) {
-    if (elementType.startsWith(prefix)) {
-      return layer;
-    }
-  }
-  // Fallback for types without a clear prefix
-  return "Business";
+  elements: Map<string, ArchiMateElement>;
+  relations: Map<string, ArchiMateRelation>;
+  views: Map<string, ArchiMateView>;
 }

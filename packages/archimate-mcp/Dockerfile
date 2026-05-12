@@ -1,20 +1,15 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copy workspace manifests first for better layer caching
 COPY package*.json ./
 COPY packages/archimate-mcp/package.json ./packages/archimate-mcp/
-
-# Install only the dependencies needed by this package
-RUN npm ci --workspace=packages/archimate-mcp --include-workspace-root
-
-# Copy source
-COPY packages/archimate-mcp ./packages/archimate-mcp
 COPY tsconfig.base.json ./
-
-# Build
+RUN npm ci
+COPY packages/archimate-mcp/ ./packages/archimate-mcp/
 RUN npm run build -w packages/archimate-mcp
 
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/archimate-mcp/dist ./dist
 EXPOSE 3100
-
-CMD ["node", "packages/archimate-mcp/dist/server.js"]
+CMD ["node", "dist/server.js"]

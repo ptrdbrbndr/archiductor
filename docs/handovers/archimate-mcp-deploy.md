@@ -146,7 +146,7 @@ De cyberductus-tunnel (`4931da40-8b72-4cc3-8f7e-6802b5e948a5`) heeft 74 bestaand
 3. PUT de volledige updated configuratie terug
 4. Maak DNS CNAME aan: `mcp` → `4931da40-8b72-4cc3-8f7e-6802b5e948a5.cfargotunnel.com` (proxied) in zone `f5117512e184e3c8e8984b85f4ca0f54`
 
-Gebruik `CLOUDFLARE_TUNNEL_EDIT_TOKEN` (`<zie_credentials.md>`) voor de tunnel-PUT.
+Gebruik `CLOUDFLARE_TUNNEL_EDIT_TOKEN` (zie `credentials.md` onder `## Cloudflare`) voor de tunnel-PUT.
 Gebruik `CLOUDFLARE_API_TOKEN` (uit `c:\Projecten\.env`) voor de DNS-CNAME.
 
 ### Stap 5 — Smoke-test

@@ -36,7 +36,7 @@ const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   isArray: (tagName) =>
-    ["element", "relationship", "view", "node", "connection", "property"].includes(tagName),
+    ["element", "relationship", "view", "node", "connection", "property", "propertyDefinition"].includes(tagName),
   allowBooleanAttributes: true,
   parseAttributeValue: false,
   trimValues: true,
@@ -44,16 +44,27 @@ const xmlParser = new XMLParser({
 });
 
 interface OefProperty {
-  "@_key": string;
-  "@_value": string;
+  // Simple format: <property key="foo" value="bar"/>
+  "@_key"?: string;
+  "@_value"?: string;
+  // OEF 3.x proper format: <property propertyDefinitionRef="propdef-1"><value xml:lang="en">IT</value></property>
+  "@_propertyDefinitionRef"?: string;
+  value?: string | { "#text": string; "@_xml:lang"?: string } | Array<string | { "#text": string; "@_xml:lang"?: string }>;
 }
+
+interface OefPropertyDefinition {
+  "@_identifier": string;
+  name?: string | { "#text": string; "@_xml:lang"?: string };
+}
+
+type OefText = string | { "#text": string; "@_xml:lang"?: string };
 
 interface OefElement {
   "@_identifier": string;
   "@_xsi:type"?: string;
   "@_type"?: string;
-  name?: string | { "#text": string };
-  documentation?: string | { "#text": string };
+  name?: OefText;
+  documentation?: OefText;
   properties?: { property?: OefProperty[] };
 }
 
@@ -63,8 +74,8 @@ interface OefRelationship {
   "@_type"?: string;
   "@_source": string;
   "@_target": string;
-  name?: string | { "#text": string };
-  documentation?: string | { "#text": string };
+  name?: OefText;
+  documentation?: OefText;
   properties?: { property?: OefProperty[] };
 }
 
@@ -84,7 +95,7 @@ interface OefView {
   "@_identifier": string;
   "@_xsi:type"?: string;
   "@_viewpointType"?: string;
-  name?: string | { "#text": string };
+  name?: OefText;
   node?: OefNode[];
   connection?: OefConnection[];
 }
@@ -93,24 +104,51 @@ interface OefRoot {
   model: {
     "@_identifier"?: string;
     "@_xmlns"?: string;
-    name?: string | { "#text": string };
-    documentation?: string | { "#text": string };
+    name?: string | { "#text": string; "@_xml:lang"?: string };
+    documentation?: string | { "#text": string; "@_xml:lang"?: string };
     elements?: { element?: OefElement[] };
     relationships?: { relationship?: OefRelationship[] };
     views?: { diagrams?: { view?: OefView[] } };
+    propertyDefinitions?: { propertyDefinition?: OefPropertyDefinition[] };
   };
 }
 
-function extractText(val: string | { "#text": string } | undefined): string {
+function extractText(val: string | { "#text": string; [k: string]: string } | undefined): string {
   if (!val) return "";
   if (typeof val === "string") return val;
   return val["#text"] ?? "";
 }
 
-function parseProperties(props?: { property?: OefProperty[] }): ArchiMateProperty[] | undefined {
+function resolvePropertyValue(
+  val: OefProperty["value"]
+): string {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (Array.isArray(val)) {
+    const first = val[0];
+    if (!first) return "";
+    if (typeof first === "string") return first;
+    return first["#text"] ?? "";
+  }
+  return val["#text"] ?? "";
+}
+
+function parseProperties(
+  props?: { property?: OefProperty[] },
+  propDefs?: Map<string, string>
+): ArchiMateProperty[] | undefined {
   const list = props?.property;
   if (!list || list.length === 0) return undefined;
-  return list.map((p) => ({ key: p["@_key"] ?? "", value: p["@_value"] ?? "" }));
+  return list.map((p) => {
+    // OEF 3.x proper: propertyDefinitionRef + <value> child
+    if (p["@_propertyDefinitionRef"] && propDefs) {
+      const key = propDefs.get(p["@_propertyDefinitionRef"]) ?? p["@_propertyDefinitionRef"];
+      const value = resolvePropertyValue(p.value);
+      return { key, value };
+    }
+    // Simple format: key/value attributes
+    return { key: p["@_key"] ?? "", value: p["@_value"] ?? "" };
+  });
 }
 
 function parseElementType(el: OefElement): string {
@@ -121,7 +159,15 @@ function parseRelationType(rel: OefRelationship): string {
   return (rel["@_xsi:type"] ?? rel["@_type"] ?? "Association").replace(/^archimate:/, "");
 }
 
-export function parseOef(xml: string): ArchiMateModel {
+/**
+ * Parse OEF XML into an ArchiMateModel.
+ *
+ * Supports two call signatures:
+ *   parseOef(xml)            — model id taken from XML identifier attribute
+ *   parseOef(modelId, xml)   — model id overridden by first argument
+ */
+export function parseOef(xmlOrId: string, xmlContent?: string): ArchiMateModel {
+  const xml = xmlContent ?? xmlOrId;
   const parsed = xmlParser.parse(xml) as OefRoot;
   const raw = parsed.model;
 
@@ -129,14 +175,23 @@ export function parseOef(xml: string): ArchiMateModel {
     throw new Error("Invalid OEF XML: missing <model> root element");
   }
 
-  const modelId = raw["@_identifier"] ?? `model-${Date.now()}`;
+  // Build propertyDefinitions lookup: identifier → name
+  const propDefs = new Map<string, string>();
+  for (const def of raw.propertyDefinitions?.propertyDefinition ?? []) {
+    const name = extractText(def.name);
+    if (name) {
+      propDefs.set(def["@_identifier"], name);
+    }
+  }
+
+  const modelId = xmlContent ? xmlOrId : (raw["@_identifier"] ?? `model-${Date.now()}`);
   const modelName = extractText(raw.name) || "Unnamed Model";
   const modelDoc = extractText(raw.documentation) || undefined;
 
   // Parse elements
   const elementsArray: ArchiMateElement[] = (raw.elements?.element ?? []).map((el) => {
     const type = parseElementType(el) as ArchiMateElementType;
-    const props = parseProperties(el.properties);
+    const props = parseProperties(el.properties, propDefs);
     const layer = ELEMENT_LAYER[type] ?? 'business';
     return {
       id: el["@_identifier"],
@@ -151,7 +206,7 @@ export function parseOef(xml: string): ArchiMateModel {
   // Parse relationships
   const relationsArray: ArchiMateRelation[] = (raw.relationships?.relationship ?? []).map((rel) => {
     const rawType = parseRelationType(rel);
-    const props = parseProperties(rel.properties);
+    const props = parseProperties(rel.properties, propDefs);
     return {
       id: rel["@_identifier"],
       type: toRelationType(rawType),

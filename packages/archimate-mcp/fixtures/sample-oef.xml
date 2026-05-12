@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       identifier="model-1">
+  <name xml:lang="en">Test Model</name>
+  <documentation xml:lang="en">A test model</documentation>
+  <elements>
+    <element identifier="elem-1" xsi:type="BusinessActor">
+      <name xml:lang="en">Customer</name>
+    </element>
+    <element identifier="elem-2" xsi:type="ApplicationComponent">
+      <name xml:lang="en">CRM System</name>
+      <documentation xml:lang="en">Customer relationship management</documentation>
+      <properties>
+        <property propertyDefinitionRef="propdef-1">
+          <value xml:lang="en">IT</value>
+        </property>
+      </properties>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="rel-1" xsi:type="Assignment" source="elem-1" target="elem-2">
+      <name xml:lang="en">uses</name>
+    </relationship>
+  </relationships>
+  <views>
+    <diagrams>
+      <view identifier="view-1" xsi:type="Diagram">
+        <name xml:lang="en">Application View</name>
+        <node identifier="node-1" elementRef="elem-1"/>
+        <node identifier="node-2" elementRef="elem-2"/>
+      </view>
+    </diagrams>
+  </views>
+  <propertyDefinitions>
+    <propertyDefinition identifier="propdef-1" type="string">
+      <name xml:lang="en">owner</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+</model>

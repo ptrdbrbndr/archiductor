@@ -102,3 +102,6 @@ export function serializeOef(model: ArchiMateModel): string {
 
   return lines.join("\n");
 }
+
+/** Alias for serializeOef — preferred name in new code */
+export const serializeToOef = serializeOef;

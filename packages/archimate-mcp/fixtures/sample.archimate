@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:archimate="http://www.archimatetool.com/archimate"
+                 xmlns:xmi="http://www.omg.org/XMI"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmi:version="2.0"
+                 xmi:id="model-1"
+                 name="Test Model">
+  <archimate:elements xsi:type="archimate:BusinessActor" xmi:id="elem-1" name="Customer"/>
+  <archimate:elements xsi:type="archimate:ApplicationComponent" xmi:id="elem-2"
+                      name="CRM System" documentation="Customer relationship management">
+    <archimate:properties key="owner" value="IT"/>
+  </archimate:elements>
+  <archimate:relationships xsi:type="archimate:AssignmentRelationship" xmi:id="rel-1"
+                           name="uses" source="elem-1" target="elem-2"/>
+  <archimate:diagrams xsi:type="archimate:ArchimateDiagramModel" xmi:id="view-1" name="Application View">
+    <archimate:children xsi:type="archimate:DiagramObject" xmi:id="child-1" archimateElement="elem-1"/>
+    <archimate:children xsi:type="archimate:DiagramObject" xmi:id="child-2" archimateElement="elem-2"/>
+  </archimate:diagrams>
+</archimate:model>

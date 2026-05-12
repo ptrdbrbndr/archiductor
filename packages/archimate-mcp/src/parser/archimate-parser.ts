@@ -28,7 +28,7 @@ const VALID_RELATION_TYPES = new Set<ArchiMateRelationType>([
 function toRelationType(raw: string): ArchiMateRelationType {
   const normalized = raw
     .replace(/^archimate:/, "")
-    .replace(/(-Relationship)?$/i, "");
+    .replace(/(-?Relationship|-?Relation)$/i, "");
   if (VALID_RELATION_TYPES.has(normalized as ArchiMateRelationType)) {
     return normalized as ArchiMateRelationType;
   }
@@ -39,7 +39,11 @@ const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   isArray: (tagName) =>
-    ["element", "relationship", "folder", "child", "sourceConnection", "property"].includes(tagName),
+    [
+      "element", "relationship", "folder", "child", "sourceConnection", "property",
+      "archimate:elements", "archimate:relationships", "archimate:diagrams", "archimate:children",
+      "archimate:properties",
+    ].includes(tagName),
   allowBooleanAttributes: true,
   parseAttributeValue: false,
   trimValues: true,
@@ -93,11 +97,45 @@ interface ArchiDiagramModel {
   child?: ArchiChild[];
 }
 
+interface ArchiDirectElement {
+  "@_xmi:id": string;
+  "@_xsi:type": string;
+  "@_name"?: string;
+  "@_documentation"?: string;
+  "archimate:properties"?: ArchiProperty | ArchiProperty[];
+}
+
+interface ArchiDirectRelationship {
+  "@_xmi:id": string;
+  "@_xsi:type": string;
+  "@_name"?: string;
+  "@_source"?: string;
+  "@_target"?: string;
+}
+
+interface ArchiDirectDiagram {
+  "@_xmi:id": string;
+  "@_name"?: string;
+  "@_xsi:type"?: string;
+  "archimate:children"?: ArchiDirectChild | ArchiDirectChild[];
+}
+
+interface ArchiDirectChild {
+  "@_xmi:id": string;
+  "@_archimateElement"?: string;
+  "@_xsi:type"?: string;
+}
+
 interface ArchiRoot {
   "archimate:model"?: {
+    "@_xmi:id"?: string;
     "@_id"?: string;
     "@_name"?: string;
     folder?: ArchiFolder[];
+    // Flat format: direct children as arrays
+    "archimate:elements"?: ArchiDirectElement | ArchiDirectElement[];
+    "archimate:relationships"?: ArchiDirectRelationship | ArchiDirectRelationship[];
+    "archimate:diagrams"?: ArchiDirectDiagram | ArchiDirectDiagram[];
   };
   "model"?: {
     "@_identifier"?: string;
@@ -243,10 +281,81 @@ function collectViews(folders: ArchiFolder[]): ArchiMateView[] {
   return views;
 }
 
-export function parseArchiMate(xml: string): ArchiMateModel {
+function parseFlatElements(raw: NonNullable<ArchiRoot["archimate:model"]>): ArchiMateElement[] {
+  const rawElems = raw["archimate:elements"];
+  if (!rawElems) return [];
+  const elems = Array.isArray(rawElems) ? rawElems : [rawElems];
+  return elems.map((el) => {
+    const rawType = (el["@_xsi:type"] ?? "").replace(/^archimate:/, "") as ArchiMateElementType;
+    const layer = ELEMENT_LAYER[rawType] ?? 'business';
+    // Properties: archimate:properties can be a single object or array
+    const rawProps = el["archimate:properties"];
+    const propsArr: ArchiProperty[] = rawProps
+      ? (Array.isArray(rawProps) ? rawProps : [rawProps])
+      : [];
+    const props = parseProperties(propsArr.length > 0 ? propsArr : undefined);
+    return {
+      id: el["@_xmi:id"],
+      name: el["@_name"] ?? "",
+      type: rawType,
+      layer,
+      ...(el["@_documentation"] ? { documentation: el["@_documentation"] } : {}),
+      properties: props ?? [],
+    };
+  });
+}
+
+function parseFlatRelations(raw: NonNullable<ArchiRoot["archimate:model"]>): ArchiMateRelation[] {
+  const rawRels = raw["archimate:relationships"];
+  if (!rawRels) return [];
+  const rels = Array.isArray(rawRels) ? rawRels : [rawRels];
+  return rels.map((rel) => {
+    const rawType = (rel["@_xsi:type"] ?? "").replace(/^archimate:/, "");
+    return {
+      id: rel["@_xmi:id"],
+      type: toRelationType(rawType),
+      sourceId: rel["@_source"] ?? "",
+      targetId: rel["@_target"] ?? "",
+      ...(rel["@_name"] ? { name: rel["@_name"] } : {}),
+      properties: [],
+    };
+  });
+}
+
+function parseFlatViews(raw: NonNullable<ArchiRoot["archimate:model"]>): ArchiMateView[] {
+  const rawDiags = raw["archimate:diagrams"];
+  if (!rawDiags) return [];
+  const diags = Array.isArray(rawDiags) ? rawDiags : [rawDiags];
+  return diags.map((diag) => {
+    const rawChildren = diag["archimate:children"];
+    const children = rawChildren
+      ? (Array.isArray(rawChildren) ? rawChildren : [rawChildren])
+      : [];
+    const elementIds = children
+      .map((c) => c["@_archimateElement"])
+      .filter((id): id is string => Boolean(id));
+    return {
+      id: diag["@_xmi:id"],
+      name: diag["@_name"] ?? "",
+      elements: elementIds.map(elementId => ({ elementId })),
+      relations: [],
+    };
+  });
+}
+
+/**
+ * Parse .archimate (Archi tool native format) XML into an ArchiMateModel.
+ *
+ * Supports two call signatures:
+ *   parseArchiMate(xml)           — model id taken from XML
+ *   parseArchiMate(modelId, xml)  — model id overridden by first argument
+ */
+export function parseArchiMate(xmlOrId: string, xmlContent?: string): ArchiMateModel {
+  const xml = xmlContent ?? xmlOrId;
+
   // Check if this is actually OEF format
   if (xml.includes("opengroup.org/xsd/archimate")) {
-    return parseOef(xml);
+    return parseOef(xmlOrId, xmlContent);
   }
 
   const parsed = xmlParser.parse(xml) as ArchiRoot;
@@ -254,16 +363,30 @@ export function parseArchiMate(xml: string): ArchiMateModel {
 
   if (!raw) {
     // Try OEF as fallback
-    return parseOef(xml);
+    return parseOef(xmlOrId, xmlContent);
   }
 
-  const modelId = raw["@_id"] ?? `model-${Date.now()}`;
+  const modelId = xmlContent ? xmlOrId : (raw["@_xmi:id"] ?? raw["@_id"] ?? `model-${Date.now()}`);
   const modelName = raw["@_name"] ?? "Unnamed Model";
   const folders = raw.folder ?? [];
 
-  const elementsArray = collectElements(folders);
-  const relationsArray = collectRelations(folders);
-  const viewsArray = collectViews(folders);
+  // Prefer flat format (direct archimate:elements/relationships/diagrams children)
+  // over the older folder-based format
+  const hasFlatElements = Boolean(raw["archimate:elements"]);
+
+  let elementsArray: ArchiMateElement[];
+  let relationsArray: ArchiMateRelation[];
+  let viewsArray: ArchiMateView[];
+
+  if (hasFlatElements) {
+    elementsArray = parseFlatElements(raw);
+    relationsArray = parseFlatRelations(raw);
+    viewsArray = parseFlatViews(raw);
+  } else {
+    elementsArray = collectElements(folders);
+    relationsArray = collectRelations(folders);
+    viewsArray = collectViews(folders);
+  }
 
   const elements = new Map(elementsArray.map(el => [el.id, el]));
   const relations = new Map(relationsArray.map(rel => [rel.id, rel]));
@@ -277,3 +400,6 @@ export function parseArchiMate(xml: string): ArchiMateModel {
     views,
   };
 }
+
+/** Alias for parseArchiMate — preferred name in new code */
+export const parseArchimate = parseArchiMate;

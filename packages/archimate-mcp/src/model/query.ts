@@ -37,18 +37,20 @@ export function filterRelations(
 // ---------------------------------------------------------------------------
 
 export interface PathResult {
-  found: boolean;
-  path: string[]; // sequence of element IDs
-  relations: string[]; // sequence of relation IDs used
+  elements: ArchiMateElement[];
+  relations: ArchiMateRelation[];
 }
 
 export function findPath(
   model: ArchiMateModel,
   fromId: string,
   toId: string,
-): PathResult {
+): PathResult | null {
+  const fromEl = model.elements.get(fromId);
+  if (!fromEl) return null;
+
   if (fromId === toId) {
-    return { found: true, path: [fromId], relations: [] };
+    return { elements: [fromEl], relations: [] };
   }
 
   // Build adjacency: elementId → list of { neighborId, relationId }
@@ -67,8 +69,8 @@ export function findPath(
 
   // BFS
   const visited = new Set<string>([fromId]);
-  const queue: Array<{ elementId: string; path: string[]; relations: string[] }> = [
-    { elementId: fromId, path: [fromId], relations: [] },
+  const queue: Array<{ elementId: string; elementIds: string[]; relationIds: string[] }> = [
+    { elementId: fromId, elementIds: [fromId], relationIds: [] },
   ];
 
   while (queue.length > 0) {
@@ -80,18 +82,20 @@ export function findPath(
       if (visited.has(neighborId)) continue;
       visited.add(neighborId);
 
-      const newPath = [...current.path, neighborId];
-      const newRelations = [...current.relations, relationId];
+      const newElementIds = [...current.elementIds, neighborId];
+      const newRelationIds = [...current.relationIds, relationId];
 
       if (neighborId === toId) {
-        return { found: true, path: newPath, relations: newRelations };
+        const elements = newElementIds.map((id) => model.elements.get(id)!).filter(Boolean);
+        const relations = newRelationIds.map((id) => model.relations.get(id)!).filter(Boolean);
+        return { elements, relations };
       }
 
-      queue.push({ elementId: neighborId, path: newPath, relations: newRelations });
+      queue.push({ elementId: neighborId, elementIds: newElementIds, relationIds: newRelationIds });
     }
   }
 
-  return { found: false, path: [], relations: [] };
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,14 +103,12 @@ export function findPath(
 // ---------------------------------------------------------------------------
 
 export interface ModelSummary {
-  modelId: string;
-  modelName: string;
+  name: string;
   totalElements: number;
   totalRelations: number;
   totalViews: number;
   elementsByLayer: Record<string, number>;
   relationsByType: Record<string, number>;
-  viewNames: string[];
 }
 
 export function buildSummary(model: ArchiMateModel): ModelSummary {
@@ -121,13 +123,16 @@ export function buildSummary(model: ArchiMateModel): ModelSummary {
   }
 
   return {
-    modelId: model.id,
-    modelName: model.name,
+    name: model.name,
     totalElements: model.elements.size,
     totalRelations: model.relations.size,
     totalViews: model.views.size,
     elementsByLayer,
     relationsByType,
-    viewNames: Array.from(model.views.values()).map((v) => v.name),
   };
+}
+
+/** Alias for buildSummary — preferred name for MCP tool layer. */
+export function getModelSummary(model: ArchiMateModel): ModelSummary {
+  return buildSummary(model);
 }

@@ -113,28 +113,27 @@ describe('findPath', () => {
 
   it('finds direct path between connected elements', () => {
     const result = findPath(model, 'a', 'c');
-    expect(result.found).toBe(true);
-    expect(result.path).toEqual(['a', 'c']);
-    expect(result.relations).toEqual(['r2']);
+    expect(result).not.toBeNull();
+    expect(result!.elements.map(e => e.id)).toEqual(['a', 'c']);
+    expect(result!.relations.map(r => r.id)).toEqual(['r2']);
   });
 
   it('finds path through intermediate element (BFS)', () => {
     const result = findPath(model, 'b', 'c');
-    expect(result.found).toBe(true);
-    expect(result.path).toEqual(['b', 'a', 'c']);
+    expect(result).not.toBeNull();
+    expect(result!.elements.map(e => e.id)).toEqual(['b', 'a', 'c']);
   });
 
-  it('returns found:false when no path exists', () => {
+  it('returns null when no path exists', () => {
     const result = findPath(model, 'a', 'd');
-    expect(result.found).toBe(false);
-    expect(result.path).toHaveLength(0);
+    expect(result).toBeNull();
   });
 
   it('returns trivial path when fromId === toId', () => {
     const result = findPath(model, 'a', 'a');
-    expect(result.found).toBe(true);
-    expect(result.path).toEqual(['a']);
-    expect(result.relations).toHaveLength(0);
+    expect(result).not.toBeNull();
+    expect(result!.elements.map(e => e.id)).toEqual(['a']);
+    expect(result!.relations).toHaveLength(0);
   });
 });
 
@@ -150,6 +149,7 @@ describe('buildSummary', () => {
     expect(summary.totalElements).toBe(3);
     expect(summary.elementsByLayer['business']).toBe(2);
     expect(summary.elementsByLayer['application']).toBe(1);
+    expect(summary.name).toBe('Test Model');
   });
 
   it('summarizes relation counts by type', () => {

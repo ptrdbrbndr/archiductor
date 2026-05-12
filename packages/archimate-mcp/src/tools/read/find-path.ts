@@ -1,5 +1,5 @@
-import type { ArchiMateModel } from "../../model/types.js";
-import { findPath, type PathResult } from "../../model/query.js";
+import type { ArchiMateElement, ArchiMateModel, ArchiMateRelation } from "../../model/types.js";
+import { findPath } from "../../model/query.js";
 
 export interface FindPathInput {
   model_id: string;
@@ -7,7 +7,10 @@ export interface FindPathInput {
   to_id: string;
 }
 
-export interface FindPathOutput extends PathResult {
+export interface FindPathOutput {
+  found: boolean;
+  elements: ArchiMateElement[];
+  relations: ArchiMateRelation[];
   fromId: string;
   toId: string;
   hopCount: number;
@@ -19,10 +22,15 @@ export function findPathTool(
   toId: string,
 ): FindPathOutput {
   const result = findPath(model, fromId, toId);
+  if (!result) {
+    return { found: false, elements: [], relations: [], fromId, toId, hopCount: -1 };
+  }
   return {
-    ...result,
+    found: true,
+    elements: result.elements,
+    relations: result.relations,
     fromId,
     toId,
-    hopCount: result.found ? result.path.length - 1 : -1,
+    hopCount: result.elements.length - 1,
   };
 }

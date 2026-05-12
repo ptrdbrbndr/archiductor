@@ -19,12 +19,13 @@ export function addRelationTool(
   model: ArchiMateModel,
   input: Omit<AddRelationInput, "model_id">,
 ): AddRelationOutput {
-  return addRelation(
+  const relation = addRelation(
     model,
     input.type,
     input.source_id,
     input.target_id,
-    input.name,
     input.properties,
+    input.name,
   );
+  return { model, relation };
 }

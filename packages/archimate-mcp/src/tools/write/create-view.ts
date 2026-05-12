@@ -17,5 +17,6 @@ export function createViewTool(
   name: string,
   viewpoint?: string,
 ): CreateViewOutput {
-  return createView(model, name, viewpoint);
+  const view = createView(model, name, viewpoint);
+  return { model, view };
 }

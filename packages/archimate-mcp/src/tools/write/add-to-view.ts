@@ -12,5 +12,10 @@ export function addToViewTool(
   viewId: string,
   elementId: string,
 ): ArchiMateModel {
-  return addToView(model, viewId, elementId);
+  try {
+    addToView(model, viewId, elementId);
+  } catch {
+    // view not found — return model unchanged
+  }
+  return model;
 }

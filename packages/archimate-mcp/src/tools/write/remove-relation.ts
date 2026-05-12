@@ -10,5 +10,6 @@ export function removeRelationTool(
   model: ArchiMateModel,
   relationId: string,
 ): ArchiMateModel {
-  return removeRelation(model, relationId);
+  removeRelation(model, relationId);
+  return model;
 }

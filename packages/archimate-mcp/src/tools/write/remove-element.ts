@@ -10,7 +10,8 @@ export interface RemoveElementInput {
 export function removeElementTool(
   model: ArchiMateModel,
   elementId: string,
-  cascade: boolean = false,
+  cascade = false,
 ): ArchiMateModel {
-  return removeElement(model, elementId, cascade);
+  removeElement(model, elementId, cascade);
+  return model;
 }

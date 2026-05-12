@@ -1,4 +1,5 @@
 import type { ArchiMateElement, ArchiMateElementType, ArchiMateLayer, ArchiMateModel, ArchiMateProperty } from "../../model/types.js";
+import { ELEMENT_LAYER } from "../../model/types.js";
 import { updateElement } from "../../model/model.js";
 
 export interface UpdateElementInput {
@@ -24,7 +25,16 @@ export function updateElementTool(
   changes: UpdateElementInput["changes"],
 ): UpdateElementOutput {
   const typedChanges = changes as Partial<Pick<ArchiMateElement, "name" | "type" | "layer" | "documentation" | "properties">>;
-  const updatedModel = updateElement(model, elementId, typedChanges);
-  const updated = updatedModel.elements.get(elementId);
-  return { model: updatedModel, updated };
+
+  // Re-infer layer when type changes but layer is not explicitly set
+  if (typedChanges.type && !typedChanges.layer) {
+    typedChanges.layer = ELEMENT_LAYER[typedChanges.type] ?? 'business';
+  }
+
+  try {
+    const updated = updateElement(model, elementId, typedChanges);
+    return { model, updated };
+  } catch {
+    return { model, updated: undefined };
+  }
 }

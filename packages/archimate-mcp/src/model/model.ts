@@ -9,133 +9,135 @@ import type {
   ArchiMateRelationType,
   ArchiMateView,
 } from "./types.js";
-import { ELEMENT_LAYER } from "./types.js";
 
 // ---------------------------------------------------------------------------
-// Model mutation helpers — all functions are pure; they return a new model.
+// Model factory
+// ---------------------------------------------------------------------------
+
+export function createModel(id: string, name: string): ArchiMateModel {
+  return {
+    id,
+    name,
+    elements: new Map(),
+    relations: new Map(),
+    views: new Map(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Element mutations — mutate model in place, return the affected entity
 // ---------------------------------------------------------------------------
 
 export function addElement(
   model: ArchiMateModel,
+  layer: ArchiMateLayer,
   type: ArchiMateElementType,
   name: string,
   properties?: ArchiMateProperty[],
   documentation?: string,
-): { model: ArchiMateModel; element: ArchiMateElement } {
-  const layer = ELEMENT_LAYER[type] ?? 'business';
+): ArchiMateElement {
   const element: ArchiMateElement = {
     id: `el-${randomUUID()}`,
     name,
     type,
     layer,
-    ...(documentation ? { documentation } : {}),
     properties: properties ?? [],
+    ...(documentation ? { documentation } : {}),
   };
-  const newElements = new Map(model.elements);
-  newElements.set(element.id, element);
-  return {
-    model: { ...model, elements: newElements },
-    element,
-  };
+  model.elements.set(element.id, element);
+  return element;
 }
 
 export function updateElement(
   model: ArchiMateModel,
   elementId: string,
   changes: Partial<Pick<ArchiMateElement, "name" | "type" | "layer" | "documentation" | "properties">>,
-): ArchiMateModel {
+): ArchiMateElement {
   const element = model.elements.get(elementId);
-  if (!element) return model;
+  if (!element) throw new Error(`Element not found: ${elementId}`);
 
   const updated: ArchiMateElement = { ...element, ...changes };
-  // Re-infer layer if type changed but layer was not explicitly set
-  if (changes.type && !changes.layer) {
-    updated.layer = ELEMENT_LAYER[changes.type] ?? 'business';
-  }
-
-  const newElements = new Map(model.elements);
-  newElements.set(elementId, updated);
-  return { ...model, elements: newElements };
+  model.elements.set(elementId, updated);
+  return updated;
 }
 
 export function removeElement(
   model: ArchiMateModel,
   elementId: string,
-  cascade: boolean,
-): ArchiMateModel {
-  const newElements = new Map(model.elements);
-  newElements.delete(elementId);
+  cascade = false,
+): void {
+  if (!model.elements.has(elementId)) {
+    throw new Error(`Element not found: ${elementId}`);
+  }
+  model.elements.delete(elementId);
 
-  let newRelations = new Map(model.relations);
   if (cascade) {
-    const toDelete: string[] = [];
-    for (const [id, rel] of newRelations) {
+    for (const [id, rel] of model.relations) {
       if (rel.sourceId === elementId || rel.targetId === elementId) {
-        toDelete.push(id);
+        model.relations.delete(id);
       }
     }
-    toDelete.forEach((id) => newRelations.delete(id));
   }
 
-  const newViews = new Map(model.views);
-  for (const [id, view] of newViews) {
-    newViews.set(id, {
-      ...view,
-      elements: view.elements.filter((e) => e.elementId !== elementId),
-    });
+  for (const view of model.views.values()) {
+    view.elements = view.elements.filter((e) => e.elementId !== elementId);
   }
-
-  return { ...model, elements: newElements, relations: newRelations, views: newViews };
 }
+
+// ---------------------------------------------------------------------------
+// Relation mutations
+// ---------------------------------------------------------------------------
 
 export function addRelation(
   model: ArchiMateModel,
   type: ArchiMateRelationType,
   sourceId: string,
   targetId: string,
-  name?: string,
   properties?: ArchiMateProperty[],
-  documentation?: string,
-): { model: ArchiMateModel; relation: ArchiMateRelation } {
+  name?: string,
+): ArchiMateRelation {
+  if (!model.elements.has(sourceId)) {
+    throw new Error(`Source element not found: ${sourceId}`);
+  }
+  if (!model.elements.has(targetId)) {
+    throw new Error(`Target element not found: ${targetId}`);
+  }
+
   const relation: ArchiMateRelation = {
     id: `rel-${randomUUID()}`,
     type,
     sourceId,
     targetId,
-    ...(name ? { name } : {}),
-    ...(documentation ? { documentation } : {}),
     properties: properties ?? [],
+    ...(name ? { name } : {}),
   };
-  const newRelations = new Map(model.relations);
-  newRelations.set(relation.id, relation);
-  return {
-    model: { ...model, relations: newRelations },
-    relation,
-  };
+  model.relations.set(relation.id, relation);
+  return relation;
 }
 
 export function removeRelation(
   model: ArchiMateModel,
   relationId: string,
-): ArchiMateModel {
-  const newRelations = new Map(model.relations);
-  newRelations.delete(relationId);
-
-  const newViews = new Map(model.views);
-  for (const [id, view] of newViews) {
-    newViews.set(id, {
-      ...view,
-      relations: view.relations.filter((rid) => rid !== relationId),
-    });
+): void {
+  if (!model.relations.has(relationId)) {
+    throw new Error(`Relation not found: ${relationId}`);
   }
-  return { ...model, relations: newRelations, views: newViews };
+  model.relations.delete(relationId);
+
+  for (const view of model.views.values()) {
+    view.relations = view.relations.filter((rid) => rid !== relationId);
+  }
 }
+
+// ---------------------------------------------------------------------------
+// View mutations
+// ---------------------------------------------------------------------------
 
 export function createView(
   model: ArchiMateModel,
   name: string,
   viewpoint?: string,
-): { model: ArchiMateModel; view: ArchiMateView } {
+): ArchiMateView {
   const view: ArchiMateView = {
     id: `view-${randomUUID()}`,
     name,
@@ -143,30 +145,19 @@ export function createView(
     elements: [],
     relations: [],
   };
-  const newViews = new Map(model.views);
-  newViews.set(view.id, view);
-  return {
-    model: { ...model, views: newViews },
-    view,
-  };
+  model.views.set(view.id, view);
+  return view;
 }
 
 export function addToView(
   model: ArchiMateModel,
   viewId: string,
   elementId: string,
-): ArchiMateModel {
+): void {
   const view = model.views.get(viewId);
-  if (!view) return model;
+  if (!view) throw new Error(`View not found: ${viewId}`);
 
-  if (view.elements.some((e) => e.elementId === elementId)) {
-    return model; // already present
+  if (!view.elements.some((e) => e.elementId === elementId)) {
+    view.elements.push({ elementId });
   }
-
-  const newViews = new Map(model.views);
-  newViews.set(viewId, {
-    ...view,
-    elements: [...view.elements, { elementId }],
-  });
-  return { ...model, views: newViews };
 }

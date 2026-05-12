@@ -112,3 +112,53 @@ export function extractBearerToken(
   if (!authHeader) return undefined;
   return Array.isArray(authHeader) ? authHeader[0] : authHeader;
 }
+
+// ---------------------------------------------------------------------------
+// verifyJwt — throwing variant used by tool handlers
+// ---------------------------------------------------------------------------
+
+export interface AuthContext {
+  userId: string;
+  modelId: string;
+}
+
+/**
+ * Validates a Bearer JWT and checks that the model_id in the token matches
+ * the tool parameter model_id.  Throws on any validation failure so callers
+ * can use a simple try/catch instead of discriminated-union checks.
+ *
+ * @param authHeader - Raw "Authorization" header value (must start with "Bearer ")
+ * @param toolModelId - The model_id supplied by the Claude tool call
+ * @returns AuthContext { userId, modelId }
+ * @throws Error with human-readable message on any failure
+ */
+export async function verifyJwt(
+  authHeader: string | undefined,
+  toolModelId: string,
+): Promise<AuthContext> {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new Error("Missing or invalid Authorization header");
+  }
+
+  const token = authHeader.slice(7);
+
+  let payload: McpJwtPayload;
+  try {
+    const result = await jwtVerify(token, getSecret(), { clockTolerance: 0 });
+    payload = result.payload as McpJwtPayload;
+  } catch (err) {
+    throw err instanceof Error ? err : new Error("Token validation failed");
+  }
+
+  if (!payload.user_id || !payload.model_id) {
+    throw new Error("Invalid JWT payload: missing user_id or model_id");
+  }
+
+  if (payload.model_id !== toolModelId) {
+    throw new Error(
+      `model_id in JWT (${payload.model_id}) does not match tool parameter (${toolModelId})`,
+    );
+  }
+
+  return { userId: payload.user_id, modelId: payload.model_id };
+}

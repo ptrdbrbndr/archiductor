@@ -1,51 +1,33 @@
 {
   "name": "archimate-mcp",
-  "version": "0.0.1",
-  "description": "HTTP/SSE MCP server exposing ArchiMate models via 15 tools to the Claude API",
+  "version": "0.1.0",
+  "description": "MCP server for ArchiMate model read/write via Claude API",
   "license": "MIT",
   "author": "Pieter de Brabander",
-  "homepage": "https://github.com/ptrdbrbndr/archiductor/tree/main/packages/archimate-mcp",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ptrdbrbndr/archiductor.git",
-    "directory": "packages/archimate-mcp"
-  },
-  "bugs": {
-    "url": "https://github.com/ptrdbrbndr/archiductor/issues"
-  },
   "type": "module",
   "main": "./dist/server.js",
   "exports": {
-    ".": {
-      "import": "./dist/server.js"
-    }
+    ".": "./dist/server.js"
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint TBD' && exit 0"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
-  "keywords": [
-    "archimate",
-    "mcp",
-    "model-context-protocol",
-    "enterprise-architecture",
-    "open-exchange-format"
-  ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "@supabase/supabase-js": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "@supabase/supabase-js": "^2.49.0",
     "fast-xml-parser": "^4.5.0",
-    "jose": "^5.0.0"
+    "jose": "^5.9.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
   },
   "engines": {
     "node": ">=20"

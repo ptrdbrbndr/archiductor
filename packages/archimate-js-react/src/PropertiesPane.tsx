@@ -39,9 +39,24 @@ export interface ElementPatch {
   documentation?: string;
 }
 
+const RELATIONSHIP_TYPES = [
+  "Association",
+  "Composition",
+  "Aggregation",
+  "Assignment",
+  "Realization",
+  "Triggering",
+  "Flow",
+  "Influence",
+  "Access",
+  "UsedBy",
+  "Specialization",
+] as const;
+
 export interface RelationshipPatch {
   name?: string;
   documentation?: string;
+  archimateType?: string;
 }
 
 export interface PropertiesPaneProps {
@@ -392,10 +407,12 @@ function EditableRelationshipSection({
   onDelete?: (id: string) => void;
 }) {
   const [name, setName] = useState(relationship.name ?? "");
+  const [relType, setRelType] = useState<string>(relationship.type);
 
   useEffect(() => {
     setName(relationship.name ?? "");
-  }, [relationship.id, relationship.name]);
+    setRelType(relationship.type);
+  }, [relationship.id, relationship.name, relationship.type]);
 
   const commitName = () => {
     const next = name.trim() || undefined;
@@ -404,8 +421,33 @@ function EditableRelationshipSection({
     }
   };
 
+  const commitType = (next: string) => {
+    setRelType(next);
+    if (next !== relationship.type) {
+      onUpdate(relationship.id, { archimateType: next });
+    }
+  };
+
   return (
     <section data-testid="properties-pane-relationship-editable">
+      <div style={{ marginBottom: "0.75rem" }}>
+        <label htmlFor={`pp-rel-type-${relationship.id}`} style={labelStyle}>
+          Relatietype
+        </label>
+        <select
+          id={`pp-rel-type-${relationship.id}`}
+          data-testid="properties-pane-rel-type-select"
+          value={relType}
+          onChange={(e) => commitType(e.target.value)}
+          style={{ ...inputStyle, cursor: "pointer" }}
+        >
+          {RELATIONSHIP_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
       <div style={{ marginBottom: "0.75rem" }}>
         <label
           htmlFor={`pp-rel-name-${relationship.id}`}
@@ -419,7 +461,7 @@ function EditableRelationshipSection({
           type="text"
           value={name}
           maxLength={400}
-          placeholder={`${relationship.type} relatie`}
+          placeholder={`${relType} relatie`}
           onChange={(e) => setName(e.target.value)}
           onBlur={commitName}
           onKeyDown={(e) => {
@@ -431,11 +473,6 @@ function EditableRelationshipSection({
         />
       </div>
       <dl style={dlStyle}>
-        <PropertyRow
-          label="Type"
-          value={relationship.type}
-          testid="properties-pane-type"
-        />
         <PropertyRow
           label="Bron"
           value={sourceName}

@@ -358,11 +358,11 @@ export function registerTools(server: McpServer): void {
     async ({ model_id, token, element_id, changes }) => {
       const outcome = await writeModel(token, model_id, (model) => {
         const { model: m, updated } = updateElementTool(model, element_id, {
-          ...(changes.name ? { name: changes.name } : {}),
-          ...(changes.type ? { type: changes.type as ArchiMateElementType } : {}),
-          ...(changes.layer ? { layer: changes.layer as ArchiMateLayer } : {}),
-          ...(changes.documentation ? { documentation: changes.documentation } : {}),
-          ...(changes.properties ? { properties: changes.properties } : {}),
+          ...(changes.name !== undefined ? { name: changes.name } : {}),
+          ...(changes.type !== undefined ? { type: changes.type as ArchiMateElementType } : {}),
+          ...(changes.layer !== undefined ? { layer: changes.layer as ArchiMateLayer } : {}),
+          ...(changes.documentation !== undefined ? { documentation: changes.documentation } : {}),
+          ...(changes.properties !== undefined ? { properties: changes.properties } : {}),
         });
         return { model: m, result: updated };
       });

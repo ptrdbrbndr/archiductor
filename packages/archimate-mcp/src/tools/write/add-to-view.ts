@@ -13,7 +13,7 @@ export function addToViewTool(
   elementId: string,
 ): ArchiMateModel {
   if (!model.views.has(viewId)) {
-    return model;
+    throw new Error(`View not found: ${viewId}`);
   }
   addToView(model, viewId, elementId);
   return model;

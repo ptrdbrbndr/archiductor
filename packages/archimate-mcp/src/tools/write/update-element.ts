@@ -31,10 +31,6 @@ export function updateElementTool(
     typedChanges.layer = ELEMENT_LAYER[typedChanges.type] ?? 'business';
   }
 
-  try {
-    const updated = updateElement(model, elementId, typedChanges);
-    return { model, updated };
-  } catch {
-    return { model, updated: undefined };
-  }
+  const updated = updateElement(model, elementId, typedChanges);
+  return { model, updated };
 }

@@ -90,10 +90,9 @@ describe('updateElementTool', () => {
     expect(updated.elements.get('el-1')!.layer).toBe('application');
   });
 
-  it('returns undefined for updated when elementId not found', () => {
+  it('throws when elementId not found', () => {
     const model = makeModel();
-    const { updated } = updateElementTool(model, 'nonexistent', { name: 'X' });
-    expect(updated).toBeUndefined();
+    expect(() => updateElementTool(model, 'nonexistent', { name: 'X' })).toThrow();
   });
 });
 
@@ -195,10 +194,9 @@ describe('addToViewTool', () => {
     expect(step2.views.get('v1')!.elements).toHaveLength(1);
   });
 
-  it('returns model unchanged if viewId does not exist', () => {
+  it('throws when viewId does not exist', () => {
     const model = seedElement(makeModel(), 'el-1');
-    const updated = addToViewTool(model, 'nonexistent-view', 'el-1');
-    expect(updated.views.size).toBe(0);
+    expect(() => addToViewTool(model, 'nonexistent-view', 'el-1')).toThrow('View not found: nonexistent-view');
   });
 });
 

@@ -9,5 +9,5 @@ export function getRelation(
   model: ArchiMateModel,
   relationId: string,
 ): ArchiMateRelation | null {
-  return model.relations.find((rel) => rel.id === relationId) ?? null;
+  return model.relations.get(relationId) ?? null;
 }

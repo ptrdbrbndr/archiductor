@@ -1,4 +1,4 @@
-import type { ArchiMateElement, ArchiMateLayer, ArchiMateModel, ArchiMateProperty } from "../../model/types.js";
+import type { ArchiMateElement, ArchiMateElementType, ArchiMateLayer, ArchiMateModel, ArchiMateProperty } from "../../model/types.js";
 import { updateElement } from "../../model/model.js";
 
 export interface UpdateElementInput {
@@ -6,7 +6,7 @@ export interface UpdateElementInput {
   element_id: string;
   changes: Partial<{
     name: string;
-    type: string;
+    type: ArchiMateElementType;
     layer: ArchiMateLayer;
     documentation: string;
     properties: ArchiMateProperty[];
@@ -23,7 +23,8 @@ export function updateElementTool(
   elementId: string,
   changes: UpdateElementInput["changes"],
 ): UpdateElementOutput {
-  const updatedModel = updateElement(model, elementId, changes);
-  const updated = updatedModel.elements.find((el) => el.id === elementId);
+  const typedChanges = changes as Partial<Pick<ArchiMateElement, "name" | "type" | "layer" | "documentation" | "properties">>;
+  const updatedModel = updateElement(model, elementId, typedChanges);
+  const updated = updatedModel.elements.get(elementId);
   return { model: updatedModel, updated };
 }

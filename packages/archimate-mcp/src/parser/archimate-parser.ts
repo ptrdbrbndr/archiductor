@@ -7,8 +7,8 @@
  */
 
 import { XMLParser } from "fast-xml-parser";
-import type { ArchiMateElement, ArchiMateModel, ArchiMateProperty, ArchiMateRelation, ArchiMateRelationType, ArchiMateView } from "../model/types.js";
-import { inferLayer } from "../model/types.js";
+import type { ArchiMateElement, ArchiMateElementType, ArchiMateModel, ArchiMateProperty, ArchiMateRelation, ArchiMateRelationType, ArchiMateView } from "../model/types.js";
+import { ELEMENT_LAYER } from "../model/types.js";
 import { parseOef } from "./oef-parser.js";
 
 const VALID_RELATION_TYPES = new Set<ArchiMateRelationType>([
@@ -114,15 +114,16 @@ function collectElements(folders: ArchiFolder[]): ArchiMateElement[] {
 
   function processFolder(folder: ArchiFolder): void {
     for (const el of folder.element ?? []) {
-      const rawType = (el["@_xsi:type"] ?? "").replace(/^archimate:/, "");
+      const rawType = (el["@_xsi:type"] ?? "").replace(/^archimate:/, "") as ArchiMateElementType;
       const props = parseProperties(el.property);
+      const layer = ELEMENT_LAYER[rawType] ?? 'business';
       elements.push({
         id: el["@_id"],
         name: el["@_name"] ?? "",
         type: rawType,
-        layer: inferLayer(rawType),
+        layer,
         ...(el["@_documentation"] ? { documentation: el["@_documentation"] } : {}),
-        ...(props ? { properties: props } : {}),
+        properties: props ?? [],
       });
     }
     for (const sub of folder.folder ?? []) {
@@ -176,6 +177,7 @@ function collectRelations(folders: ArchiFolder[]): ArchiMateRelation[] {
               sourceId,
               targetId,
               ...(el["@_name"] ? { name: el["@_name"] } : {}),
+              properties: props ?? [],
             });
           }
         }
@@ -219,14 +221,14 @@ function collectViews(folders: ArchiFolder[]): ArchiMateView[] {
   function processFolder(folder: ArchiFolder): void {
     // Views are stored as "child" elements within diagram folders
     for (const child of folder.child ?? []) {
-      const viewpointType = child["@_xsi:type"]?.replace(/^archimate:/, "") ?? undefined;
+      const viewpoint = child["@_xsi:type"]?.replace(/^archimate:/, "") ?? undefined;
       const { elementIds, relationIds } = collectChildRefs(child.child ?? []);
       views.push({
         id: child["@_id"],
         name: "",
-        ...(viewpointType ? { viewpointType } : {}),
-        elementIds,
-        relationIds,
+        ...(viewpoint ? { viewpoint } : {}),
+        elements: elementIds.map(elementId => ({ elementId })),
+        relations: relationIds,
       });
     }
     for (const sub of folder.folder ?? []) {
@@ -259,9 +261,13 @@ export function parseArchiMate(xml: string): ArchiMateModel {
   const modelName = raw["@_name"] ?? "Unnamed Model";
   const folders = raw.folder ?? [];
 
-  const elements = collectElements(folders);
-  const relations = collectRelations(folders);
-  const views = collectViews(folders);
+  const elementsArray = collectElements(folders);
+  const relationsArray = collectRelations(folders);
+  const viewsArray = collectViews(folders);
+
+  const elements = new Map(elementsArray.map(el => [el.id, el]));
+  const relations = new Map(relationsArray.map(rel => [rel.id, rel]));
+  const views = new Map(viewsArray.map(view => [view.id, view]));
 
   return {
     id: modelId,

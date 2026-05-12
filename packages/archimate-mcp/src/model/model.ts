@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type {
   ArchiMateElement,
+  ArchiMateElementType,
   ArchiMateLayer,
   ArchiMateModel,
   ArchiMateProperty,
   ArchiMateRelation,
   ArchiMateRelationType,
   ArchiMateView,
-  ArchiMateViewpointType,
 } from "./types.js";
-import { inferLayer } from "./types.js";
+import { ELEMENT_LAYER } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Model mutation helpers — all functions are pure; they return a new model.
@@ -17,22 +17,24 @@ import { inferLayer } from "./types.js";
 
 export function addElement(
   model: ArchiMateModel,
-  layer: ArchiMateLayer,
-  type: string,
+  type: ArchiMateElementType,
   name: string,
   properties?: ArchiMateProperty[],
   documentation?: string,
 ): { model: ArchiMateModel; element: ArchiMateElement } {
+  const layer = ELEMENT_LAYER[type] ?? 'business';
   const element: ArchiMateElement = {
     id: `el-${randomUUID()}`,
     name,
     type,
     layer,
     ...(documentation ? { documentation } : {}),
-    ...(properties?.length ? { properties } : {}),
+    properties: properties ?? [],
   };
+  const newElements = new Map(model.elements);
+  newElements.set(element.id, element);
   return {
-    model: { ...model, elements: [...model.elements, element] },
+    model: { ...model, elements: newElements },
     element,
   };
 }
@@ -42,16 +44,18 @@ export function updateElement(
   elementId: string,
   changes: Partial<Pick<ArchiMateElement, "name" | "type" | "layer" | "documentation" | "properties">>,
 ): ArchiMateModel {
-  const elements = model.elements.map((el) => {
-    if (el.id !== elementId) return el;
-    const updated = { ...el, ...changes };
-    // Re-infer layer if type changed but layer was not explicitly set
-    if (changes.type && !changes.layer) {
-      updated.layer = inferLayer(changes.type);
-    }
-    return updated;
-  });
-  return { ...model, elements };
+  const element = model.elements.get(elementId);
+  if (!element) return model;
+
+  const updated: ArchiMateElement = { ...element, ...changes };
+  // Re-infer layer if type changed but layer was not explicitly set
+  if (changes.type && !changes.layer) {
+    updated.layer = ELEMENT_LAYER[changes.type] ?? 'business';
+  }
+
+  const newElements = new Map(model.elements);
+  newElements.set(elementId, updated);
+  return { ...model, elements: newElements };
 }
 
 export function removeElement(
@@ -59,22 +63,29 @@ export function removeElement(
   elementId: string,
   cascade: boolean,
 ): ArchiMateModel {
-  const elements = model.elements.filter((el) => el.id !== elementId);
+  const newElements = new Map(model.elements);
+  newElements.delete(elementId);
 
-  let relations = model.relations;
+  let newRelations = new Map(model.relations);
   if (cascade) {
-    relations = relations.filter(
-      (rel) => rel.sourceId !== elementId && rel.targetId !== elementId,
-    );
+    const toDelete: string[] = [];
+    for (const [id, rel] of newRelations) {
+      if (rel.sourceId === elementId || rel.targetId === elementId) {
+        toDelete.push(id);
+      }
+    }
+    toDelete.forEach((id) => newRelations.delete(id));
   }
 
-  const views = model.views.map((view) => ({
-    ...view,
-    elementIds: view.elementIds.filter((id) => id !== elementId),
-    nodes: view.nodes?.filter((n) => n.elementId !== elementId),
-  }));
+  const newViews = new Map(model.views);
+  for (const [id, view] of newViews) {
+    newViews.set(id, {
+      ...view,
+      elements: view.elements.filter((e) => e.elementId !== elementId),
+    });
+  }
 
-  return { ...model, elements, relations, views };
+  return { ...model, elements: newElements, relations: newRelations, views: newViews };
 }
 
 export function addRelation(
@@ -93,10 +104,12 @@ export function addRelation(
     targetId,
     ...(name ? { name } : {}),
     ...(documentation ? { documentation } : {}),
-    ...(properties?.length ? { properties } : {}),
+    properties: properties ?? [],
   };
+  const newRelations = new Map(model.relations);
+  newRelations.set(relation.id, relation);
   return {
-    model: { ...model, relations: [...model.relations, relation] },
+    model: { ...model, relations: newRelations },
     relation,
   };
 }
@@ -105,31 +118,35 @@ export function removeRelation(
   model: ArchiMateModel,
   relationId: string,
 ): ArchiMateModel {
-  const relations = model.relations.filter((rel) => rel.id !== relationId);
-  const views = model.views.map((view) => ({
-    ...view,
-    relationIds: view.relationIds.filter((id) => id !== relationId),
-    connections: view.connections?.filter((c) => c.relationId !== relationId),
-  }));
-  return { ...model, relations, views };
+  const newRelations = new Map(model.relations);
+  newRelations.delete(relationId);
+
+  const newViews = new Map(model.views);
+  for (const [id, view] of newViews) {
+    newViews.set(id, {
+      ...view,
+      relations: view.relations.filter((rid) => rid !== relationId),
+    });
+  }
+  return { ...model, relations: newRelations, views: newViews };
 }
 
 export function createView(
   model: ArchiMateModel,
   name: string,
-  viewpointType?: ArchiMateViewpointType,
+  viewpoint?: string,
 ): { model: ArchiMateModel; view: ArchiMateView } {
   const view: ArchiMateView = {
     id: `view-${randomUUID()}`,
     name,
-    ...(viewpointType ? { viewpointType } : {}),
-    elementIds: [],
-    relationIds: [],
-    nodes: [],
-    connections: [],
+    ...(viewpoint ? { viewpoint } : {}),
+    elements: [],
+    relations: [],
   };
+  const newViews = new Map(model.views);
+  newViews.set(view.id, view);
   return {
-    model: { ...model, views: [...model.views, view] },
+    model: { ...model, views: newViews },
     view,
   };
 }
@@ -139,14 +156,17 @@ export function addToView(
   viewId: string,
   elementId: string,
 ): ArchiMateModel {
-  const views = model.views.map((view) => {
-    if (view.id !== viewId) return view;
-    if (view.elementIds.includes(elementId)) return view; // already present
-    return {
-      ...view,
-      elementIds: [...view.elementIds, elementId],
-      nodes: [...(view.nodes ?? []), { elementId }],
-    };
+  const view = model.views.get(viewId);
+  if (!view) return model;
+
+  if (view.elements.some((e) => e.elementId === elementId)) {
+    return model; // already present
+  }
+
+  const newViews = new Map(model.views);
+  newViews.set(viewId, {
+    ...view,
+    elements: [...view.elements, { elementId }],
   });
-  return { ...model, views };
+  return { ...model, views: newViews };
 }

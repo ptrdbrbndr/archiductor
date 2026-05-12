@@ -15,14 +15,22 @@ export function getView(
   model: ArchiMateModel,
   viewId: string,
 ): ViewDetails | null {
-  const view = model.views.find((v) => v.id === viewId);
+  const view = model.views.get(viewId);
   if (!view) return null;
 
-  const elementSet = new Set(view.elementIds);
-  const relationSet = new Set(view.relationIds);
+  const elementIdSet = new Set(view.elements.map(e => e.elementId));
+  const relationIdSet = new Set(view.relations);
 
-  const elements = model.elements.filter((el) => elementSet.has(el.id));
-  const relations = model.relations.filter((rel) => relationSet.has(rel.id));
+  const elements: ArchiMateElement[] = [];
+  const relations: ArchiMateRelation[] = [];
+
+  for (const el of model.elements.values()) {
+    if (elementIdSet.has(el.id)) elements.push(el);
+  }
+
+  for (const rel of model.relations.values()) {
+    if (relationIdSet.has(rel.id)) relations.push(rel);
+  }
 
   return { view, elements, relations };
 }

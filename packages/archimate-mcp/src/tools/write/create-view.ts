@@ -1,10 +1,10 @@
-import type { ArchiMateModel, ArchiMateView, ArchiMateViewpointType } from "../../model/types.js";
+import type { ArchiMateModel, ArchiMateView } from "../../model/types.js";
 import { createView } from "../../model/model.js";
 
 export interface CreateViewInput {
   model_id: string;
   name: string;
-  viewpoint_type?: ArchiMateViewpointType;
+  viewpoint?: string;
 }
 
 export interface CreateViewOutput {
@@ -15,7 +15,7 @@ export interface CreateViewOutput {
 export function createViewTool(
   model: ArchiMateModel,
   name: string,
-  viewpointType?: ArchiMateViewpointType,
+  viewpoint?: string,
 ): CreateViewOutput {
-  return createView(model, name, viewpointType);
+  return createView(model, name, viewpoint);
 }

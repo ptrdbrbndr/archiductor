@@ -8,24 +8,28 @@ export function filterElements(
   model: ArchiMateModel,
   opts: { layer?: ArchiMateLayer; type?: string; name?: string },
 ): ArchiMateElement[] {
-  return model.elements.filter((el) => {
-    if (opts.layer && el.layer !== opts.layer) return false;
-    if (opts.type && el.type !== opts.type) return false;
-    if (opts.name && !el.name.toLowerCase().includes(opts.name.toLowerCase())) return false;
-    return true;
-  });
+  const result: ArchiMateElement[] = [];
+  for (const el of model.elements.values()) {
+    if (opts.layer && el.layer !== opts.layer) continue;
+    if (opts.type && el.type !== opts.type) continue;
+    if (opts.name && !el.name.toLowerCase().includes(opts.name.toLowerCase())) continue;
+    result.push(el);
+  }
+  return result;
 }
 
 export function filterRelations(
   model: ArchiMateModel,
   opts: { sourceId?: string; targetId?: string; type?: ArchiMateRelationType },
 ): ArchiMateRelation[] {
-  return model.relations.filter((rel) => {
-    if (opts.sourceId && rel.sourceId !== opts.sourceId) return false;
-    if (opts.targetId && rel.targetId !== opts.targetId) return false;
-    if (opts.type && rel.type !== opts.type) return false;
-    return true;
-  });
+  const result: ArchiMateRelation[] = [];
+  for (const rel of model.relations.values()) {
+    if (opts.sourceId && rel.sourceId !== opts.sourceId) continue;
+    if (opts.targetId && rel.targetId !== opts.targetId) continue;
+    if (opts.type && rel.type !== opts.type) continue;
+    result.push(rel);
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,11 +54,11 @@ export function findPath(
   // Build adjacency: elementId → list of { neighborId, relationId }
   const adjacency = new Map<string, Array<{ neighborId: string; relationId: string }>>();
 
-  for (const el of model.elements) {
+  for (const el of model.elements.values()) {
     adjacency.set(el.id, []);
   }
 
-  for (const rel of model.relations) {
+  for (const rel of model.relations.values()) {
     const srcList = adjacency.get(rel.sourceId);
     const tgtList = adjacency.get(rel.targetId);
     srcList?.push({ neighborId: rel.targetId, relationId: rel.id });
@@ -107,23 +111,23 @@ export interface ModelSummary {
 
 export function buildSummary(model: ArchiMateModel): ModelSummary {
   const elementsByLayer: Record<string, number> = {};
-  for (const el of model.elements) {
+  for (const el of model.elements.values()) {
     elementsByLayer[el.layer] = (elementsByLayer[el.layer] ?? 0) + 1;
   }
 
   const relationsByType: Record<string, number> = {};
-  for (const rel of model.relations) {
+  for (const rel of model.relations.values()) {
     relationsByType[rel.type] = (relationsByType[rel.type] ?? 0) + 1;
   }
 
   return {
     modelId: model.id,
     modelName: model.name,
-    totalElements: model.elements.length,
-    totalRelations: model.relations.length,
-    totalViews: model.views.length,
+    totalElements: model.elements.size,
+    totalRelations: model.relations.size,
+    totalViews: model.views.size,
     elementsByLayer,
     relationsByType,
-    viewNames: model.views.map((v) => v.name),
+    viewNames: Array.from(model.views.values()).map((v) => v.name),
   };
 }

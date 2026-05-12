@@ -42,7 +42,7 @@ export function serializeOef(model: ArchiMateModel): string {
 
   // Elements
   lines.push(`  <elements>`);
-  for (const el of model.elements) {
+  for (const el of model.elements.values()) {
     lines.push(`    <element identifier="${escapeXml(el.id)}" xsi:type="${escapeXml(el.type)}">`);
     lines.push(`      <name>${escapeXml(el.name)}</name>`);
     if (el.documentation) {
@@ -61,7 +61,7 @@ export function serializeOef(model: ArchiMateModel): string {
 
   // Relationships
   lines.push(`  <relationships>`);
-  for (const rel of model.relations) {
+  for (const rel of model.relations.values()) {
     const nameAttr = rel.name ? ` name="${escapeXml(rel.name)}"` : "";
     lines.push(
       `    <relationship identifier="${escapeXml(rel.id)}" xsi:type="${escapeXml(rel.type)}"${nameAttr} source="${escapeXml(rel.sourceId)}" target="${escapeXml(rel.targetId)}">`,
@@ -83,19 +83,15 @@ export function serializeOef(model: ArchiMateModel): string {
   // Views
   lines.push(`  <views>`);
   lines.push(`    <diagrams>`);
-  for (const view of model.views) {
-    const vpAttr = view.viewpointType ? ` viewpointType="${escapeXml(view.viewpointType)}"` : "";
+  for (const view of model.views.values()) {
+    const vpAttr = view.viewpoint ? ` viewpointType="${escapeXml(view.viewpoint)}"` : "";
     lines.push(`      <view identifier="${escapeXml(view.id)}"${vpAttr}>`);
     lines.push(`        <name>${escapeXml(view.name)}</name>`);
-    for (const node of view.nodes ?? []) {
-      const xAttr = node.x != null ? ` x="${node.x}"` : "";
-      const yAttr = node.y != null ? ` y="${node.y}"` : "";
-      const wAttr = node.w != null ? ` w="${node.w}"` : "";
-      const hAttr = node.h != null ? ` h="${node.h}"` : "";
-      lines.push(`        <node elementRef="${escapeXml(node.elementId)}"${xAttr}${yAttr}${wAttr}${hAttr}/>`);
+    for (const elem of view.elements) {
+      lines.push(`        <node elementRef="${escapeXml(elem.elementId)}"/>`);
     }
-    for (const conn of view.connections ?? []) {
-      lines.push(`        <connection relationshipRef="${escapeXml(conn.relationId)}"/>`);
+    for (const relId of view.relations) {
+      lines.push(`        <connection relationshipRef="${escapeXml(relId)}"/>`);
     }
     lines.push(`      </view>`);
   }

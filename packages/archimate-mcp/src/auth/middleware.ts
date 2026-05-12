@@ -1,4 +1,4 @@
-import { jwtVerify, type JWTPayload } from "jose";
+import { jwtVerify, errors, type JWTPayload } from "jose";
 
 const JWT_SECRET_ENV = "MCP_JWT_SECRET";
 
@@ -61,8 +61,7 @@ export async function validateAuth(
     });
     payload = result.payload as McpJwtPayload;
   } catch (err) {
-    const isExpired =
-      err instanceof Error && err.message.toLowerCase().includes("expired");
+    const isExpired = err instanceof errors.JWTExpired;
     return {
       ok: false,
       error: {

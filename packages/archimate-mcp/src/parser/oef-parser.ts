@@ -6,8 +6,8 @@
  */
 
 import { XMLParser } from "fast-xml-parser";
-import type { ArchiMateElement, ArchiMateModel, ArchiMateProperty, ArchiMateRelation, ArchiMateRelationType, ArchiMateView } from "../model/types.js";
-import { inferLayer } from "../model/types.js";
+import type { ArchiMateElement, ArchiMateElementType, ArchiMateModel, ArchiMateProperty, ArchiMateRelation, ArchiMateRelationType, ArchiMateView } from "../model/types.js";
+import { ELEMENT_LAYER } from "../model/types.js";
 
 const VALID_RELATION_TYPES = new Set<ArchiMateRelationType>([
   "Association",
@@ -134,21 +134,22 @@ export function parseOef(xml: string): ArchiMateModel {
   const modelDoc = extractText(raw.documentation) || undefined;
 
   // Parse elements
-  const elements: ArchiMateElement[] = (raw.elements?.element ?? []).map((el) => {
-    const type = parseElementType(el);
+  const elementsArray: ArchiMateElement[] = (raw.elements?.element ?? []).map((el) => {
+    const type = parseElementType(el) as ArchiMateElementType;
     const props = parseProperties(el.properties);
+    const layer = ELEMENT_LAYER[type] ?? 'business';
     return {
       id: el["@_identifier"],
       name: extractText(el.name),
       type,
-      layer: inferLayer(type),
+      layer,
       ...(el.documentation ? { documentation: extractText(el.documentation) } : {}),
-      ...(props ? { properties: props } : {}),
+      properties: props ?? [],
     };
   });
 
   // Parse relationships
-  const relations: ArchiMateRelation[] = (raw.relationships?.relationship ?? []).map((rel) => {
+  const relationsArray: ArchiMateRelation[] = (raw.relationships?.relationship ?? []).map((rel) => {
     const rawType = parseRelationType(rel);
     const props = parseProperties(rel.properties);
     return {
@@ -158,12 +159,12 @@ export function parseOef(xml: string): ArchiMateModel {
       targetId: rel["@_target"],
       ...(rel.name ? { name: extractText(rel.name) } : {}),
       ...(rel.documentation ? { documentation: extractText(rel.documentation) } : {}),
-      ...(props ? { properties: props } : {}),
+      properties: props ?? [],
     };
   });
 
   // Parse views
-  const views: ArchiMateView[] = (raw.views?.diagrams?.view ?? []).map((view) => {
+  const viewsArray: ArchiMateView[] = (raw.views?.diagrams?.view ?? []).map((view) => {
     const nodes = view.node ?? [];
     const conns = view.connection ?? [];
     const elementIds = nodes.map((n) => n["@_elementRef"]).filter(Boolean);
@@ -172,19 +173,15 @@ export function parseOef(xml: string): ArchiMateModel {
     return {
       id: view["@_identifier"],
       name: extractText(view.name),
-      ...(view["@_viewpointType"] ? { viewpointType: view["@_viewpointType"] } : {}),
-      elementIds,
-      relationIds,
-      nodes: nodes.map((n) => ({
-        elementId: n["@_elementRef"],
-        ...(n["@_x"] ? { x: Number(n["@_x"]) } : {}),
-        ...(n["@_y"] ? { y: Number(n["@_y"]) } : {}),
-        ...(n["@_w"] ? { w: Number(n["@_w"]) } : {}),
-        ...(n["@_h"] ? { h: Number(n["@_h"]) } : {}),
-      })),
-      connections: conns.map((c) => ({ relationId: c["@_relationshipRef"] })),
+      ...(view["@_viewpointType"] ? { viewpoint: view["@_viewpointType"] } : {}),
+      elements: elementIds.map(elementId => ({ elementId })),
+      relations: relationIds,
     };
   });
+
+  const elements = new Map(elementsArray.map(el => [el.id, el]));
+  const relations = new Map(relationsArray.map(rel => [rel.id, rel]));
+  const views = new Map(viewsArray.map(view => [view.id, view]));
 
   return {
     id: modelId,

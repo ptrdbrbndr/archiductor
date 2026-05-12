@@ -56,6 +56,12 @@ export const ELEMENT_LAYER: Record<string, ArchiMateLayer> = {
   Grouping: 'application', Location: 'business', Junction: 'application',
 };
 
+export type ArchiMateViewpointType = string;
+
+export function inferLayer(type: string): ArchiMateLayer {
+  return ELEMENT_LAYER[type] ?? 'application';
+}
+
 export interface ArchiMateProperty {
   key: string;
   value: string;

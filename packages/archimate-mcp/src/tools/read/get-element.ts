@@ -9,5 +9,5 @@ export function getElement(
   model: ArchiMateModel,
   elementId: string,
 ): ArchiMateElement | null {
-  return model.elements.find((el) => el.id === elementId) ?? null;
+  return model.elements.get(elementId) ?? null;
 }

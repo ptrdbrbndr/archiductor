@@ -1,10 +1,9 @@
-import type { ArchiMateElement, ArchiMateLayer, ArchiMateModel, ArchiMateProperty } from "../../model/types.js";
+import type { ArchiMateElement, ArchiMateElementType, ArchiMateModel, ArchiMateProperty } from "../../model/types.js";
 import { addElement } from "../../model/model.js";
 
 export interface AddElementInput {
   model_id: string;
-  layer: ArchiMateLayer;
-  type: string;
+  type: ArchiMateElementType;
   name: string;
   properties?: ArchiMateProperty[];
   documentation?: string;
@@ -19,5 +18,5 @@ export function addElementTool(
   model: ArchiMateModel,
   input: Omit<AddElementInput, "model_id">,
 ): AddElementOutput {
-  return addElement(model, input.layer, input.type, input.name, input.properties, input.documentation);
+  return addElement(model, input.type, input.name, input.properties, input.documentation);
 }

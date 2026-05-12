@@ -35,7 +35,7 @@ import { addRelationTool } from "./write/add-relation.js";
 import { removeRelationTool } from "./write/remove-relation.js";
 import { addToViewTool } from "./write/add-to-view.js";
 import { createViewTool } from "./write/create-view.js";
-import type { ArchiMateLayer, ArchiMateRelationType, ArchiMateViewpointType } from "../model/types.js";
+import type { ArchiMateLayer, ArchiMateRelationType, ArchiMateElementType } from "../model/types.js";
 
 // ---------------------------------------------------------------------------
 // Shared schemas
@@ -45,7 +45,7 @@ const ModelIdSchema = z.string().uuid();
 const ElementIdSchema = z.string();
 const RelationIdSchema = z.string();
 const ViewIdSchema = z.string();
-const LayerSchema = z.enum(["Business", "Application", "Technology", "Motivation", "Implementation", "Strategy"]);
+const LayerSchema = z.enum(["motivation", "strategy", "business", "application", "technology", "physical", "implementation_migration"]);
 const RelationTypeSchema = z.enum([
   "Association",
   "Access",
@@ -319,8 +319,7 @@ export function registerTools(server: McpServer): void {
     async ({ model_id, token, layer, type, name, properties, documentation }) => {
       const outcome = await writeModel(token, model_id, (model) => {
         const { model: m, element } = addElementTool(model, {
-          layer: layer as ArchiMateLayer,
-          type,
+          type: type as ArchiMateElementType,
           name,
           properties,
           documentation,
@@ -352,7 +351,7 @@ export function registerTools(server: McpServer): void {
       const outcome = await writeModel(token, model_id, (model) => {
         const { model: m, updated } = updateElementTool(model, element_id, {
           ...(changes.name ? { name: changes.name } : {}),
-          ...(changes.type ? { type: changes.type } : {}),
+          ...(changes.type ? { type: changes.type as ArchiMateElementType } : {}),
           ...(changes.layer ? { layer: changes.layer as ArchiMateLayer } : {}),
           ...(changes.documentation ? { documentation: changes.documentation } : {}),
           ...(changes.properties ? { properties: changes.properties } : {}),
@@ -468,7 +467,7 @@ export function registerTools(server: McpServer): void {
         const { model: m, view } = createViewTool(
           model,
           name,
-          viewpoint_type as ArchiMateViewpointType | undefined,
+          viewpoint_type,
         );
         return { model: m, result: view };
       });

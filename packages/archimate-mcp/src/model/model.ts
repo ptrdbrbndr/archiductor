@@ -72,11 +72,11 @@ export function removeElement(
   model.elements.delete(elementId);
 
   if (cascade) {
+    const toDelete: string[] = [];
     for (const [id, rel] of model.relations) {
-      if (rel.sourceId === elementId || rel.targetId === elementId) {
-        model.relations.delete(id);
-      }
+      if (rel.sourceId === elementId || rel.targetId === elementId) toDelete.push(id);
     }
+    for (const id of toDelete) model.relations.delete(id);
   }
 
   for (const view of model.views.values()) {

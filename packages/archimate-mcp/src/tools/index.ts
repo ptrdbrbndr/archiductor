@@ -114,7 +114,15 @@ async function writeModel<T>(
   }
 
   const model = parseOef(fetched.content);
-  const { model: updatedModel, result } = mutate(model);
+  let updatedModel: ReturnType<typeof parseOef>;
+  let result: T;
+  try {
+    const mutated = mutate(model);
+    updatedModel = mutated.model;
+    result = mutated.result;
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
   const xml = serializeOef(updatedModel);
 
   const saved = await saveModel(modelId, auth.payload.user_id, xml, fetched.version);
